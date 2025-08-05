@@ -12,7 +12,7 @@ use Illuminate\View\View;
 class ProfileController extends Controller
 {
     /**
-     * Display the user's profile form.
+     * Menampilkan form edit profil.
      */
     public function edit(Request $request): View
     {
@@ -22,12 +22,20 @@ class ProfileController extends Controller
     }
 
     /**
-     * Update the user's profile information.
+     * Memperbarui informasi profil pengguna (email dan semester).
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        // Validasi hanya untuk email dan semester
+        $validatedData = $request->validate([
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email,'.Auth::id()],
+            'semester' => ['required', 'string', 'max:255'],
+        ]);
 
+        // Mengisi data pengguna dengan data yang divalidasi
+        $request->user()->fill($validatedData);
+
+        // Jika email diubah, reset verifikasi email
         if ($request->user()->isDirty('email')) {
             $request->user()->email_verified_at = null;
         }
@@ -38,7 +46,7 @@ class ProfileController extends Controller
     }
 
     /**
-     * Delete the user's account.
+     * Menghapus akun pengguna.
      */
     public function destroy(Request $request): RedirectResponse
     {

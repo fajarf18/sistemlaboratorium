@@ -50,4 +50,8 @@ protected $fillable = [
             'password' => 'hashed',
         ];
     }
+    public function keranjangs()
+{
+    return $this->hasMany(Keranjang::class);
+}
 }
