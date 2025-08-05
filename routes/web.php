@@ -23,9 +23,8 @@ Route::get('/dashboard', function () {
 // Grup rute khusus Admin
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', function () {
-        return 'Ini adalah Dashboard Admin'; 
+        return view('admin.dashboard'); 
     })->name('dashboard');
-    // ... rute admin lainnya ...
 });
 
 // Grup rute khusus User (Mahasiswa)
