@@ -17,7 +17,16 @@ public function up(): void
         $table->date('tanggal_pinjam');
         $table->date('tanggal_wajib_kembali');
         $table->date('tanggal_kembali')->nullable();
-        $table->string('status')->default('Menunggu Konfirmasi'); // Diberi nilai default
+        
+        // --- PERUBAHAN DI SINI ---
+        // Mengubah dari string menjadi enum dengan daftar status yang diizinkan
+        $table->enum('status', [
+            'Menunggu Konfirmasi',
+            'Dipinjam',
+            'Dikembalikan',
+            'Tunggu Konfirmasi Admin' // Nama baru untuk pengembalian
+        ])->default('Menunggu Konfirmasi');
+        
         $table->timestamps();
     });
 }
