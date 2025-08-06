@@ -9,14 +9,16 @@ class Barang extends Model
 {
     use HasFactory;
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'nama_barang',
+        'kode_barang', // <-- PASTIKAN BARIS INI ADA
         'tipe',
         'stok',
         'gambar',
     ];
-    public function keranjangs()
-{
-    return $this->hasMany(Keranjang::class);
-}
 }

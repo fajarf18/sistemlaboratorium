@@ -1,4 +1,5 @@
 <?php
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\PinjamBarangController; 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -7,6 +8,8 @@ use App\Http\Controllers\RincianPinjamanController;
 use App\Http\Controllers\KembalikanBarangController;
 use App\Http\Controllers\HistoryPeminjamanController;
 use App\Http\Controllers\UserDashboardController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\BarangController;
 
 // Rute untuk tamu (landing page)
 Route::get('/', function () {
@@ -27,10 +30,17 @@ Route::get('/dashboard', function () {
 
 // Grup rute khusus Admin
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', function () {
-        return view('admin.dashboard'); 
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/barang', [BarangController::class, 'index'])->name('barang.index');
+    Route::get('/barang/create', [BarangController::class, 'create'])->name('barang.create');
+    Route::post('/barang', [BarangController::class, 'store'])->name('barang.store');
+    Route::delete('/barang/{barang}', [BarangController::class, 'destroy'])->name('barang.destroy');
+    Route::put('/barang/{barang}', [BarangController::class, 'update'])->name('barang.update');
 });
+
+
+
+
 
 // Grup rute khusus User (Mahasiswa)
 Route::middleware('auth')->prefix('user')->name('user.')->group(function () {
@@ -66,5 +76,14 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', function () {
+        return view('admin.dashboard');
+    })->name('dashboard');
+
+    // Rute Baru Untuk Halaman Barang
+    Route::get('/barang', [BarangController::class, 'index'])->name('barang.index');
+});
 // File rute autentikasi
 require __DIR__.'/auth.php';

@@ -7,7 +7,6 @@
     <title>{{ config('app.name', 'Laravel') }} - Admin</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
-    {{-- Menggunakan 'defer' agar AlpineJS tidak memblokir render halaman --}}
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -15,22 +14,19 @@
     class="font-sans antialiased bg-gray-50"
     x-data="{ sidebarOpen: window.innerWidth >= 1024 }"
     @resize.window="sidebarOpen = window.innerWidth >= 1024"
-    {{-- Class ini akan mengunci scroll di body saat sidebar terbuka di mobile --}}
     :class="{ 'overflow-hidden lg:overflow-auto': sidebarOpen && window.innerWidth < 1024 }"
 >
 
-    {{-- Memanggil sidebar khusus untuk admin --}}
     @include('layouts.partials.admin-sidebar')
 
-    {{-- Konten utama dengan margin kiri untuk memberi ruang bagi sidebar di layar besar --}}
     <div class="min-h-screen transition-all duration-300" :class="{ 'lg:ml-64': sidebarOpen }">
         
-        {{-- Memanggil navbar khusus untuk admin --}}
         @include('layouts.partials.admin-navbar')
 
-        {{-- Konten halaman akan dimuat di sini --}}
+        {{-- BAGIAN PENTING ADA DI SINI --}}
         <main class="p-4 sm:p-6 md:p-8">
-        @yield('content')
+            {{-- Variabel '$slot' ini akan mencetak semua konten dari file index.blade.php --}}
+            {{ $slot }}
         </main>
 
     </div>
