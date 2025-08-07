@@ -10,6 +10,7 @@ use App\Http\Controllers\HistoryPeminjamanController;
 use App\Http\Controllers\UserDashboardController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\BarangController;
+use App\Http\Controllers\Admin\UserController;
 
 // Rute untuk tamu (landing page)
 Route::get('/', function () {
@@ -28,15 +29,25 @@ Route::get('/dashboard', function () {
     return redirect('/');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-// Grup rute khusus Admin
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+// Rute untuk Admin
+Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Rute untuk dashboard admin
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/barang', [BarangController::class, 'index'])->name('barang.index');
-    Route::get('/barang/create', [BarangController::class, 'create'])->name('barang.create');
-    Route::post('/barang', [BarangController::class, 'store'])->name('barang.store');
-    Route::delete('/barang/{barang}', [BarangController::class, 'destroy'])->name('barang.destroy');
-    Route::put('/barang/{barang}', [BarangController::class, 'update'])->name('barang.update');
+    
+    // Rute kustom untuk download harus didefinisikan SEBELUM resource controller
+    Route::get('barang/download', [BarangController::class, 'download'])->name('barang.download');
+    
+    // Resource controller untuk menangani semua aksi CRUD standar.
+    // Kita batasi hanya untuk metode yang ada di controller Anda untuk menghindari error.
+    Route::resource('barang', BarangController::class)->only([
+        'index', 'store', 'update', 'destroy'
+    ]);
+    //Pengaturan pengguna
+    Route::resource('users', UserController::class)->only(['index']);
+    Route::resource('users', UserController::class)->only(['index', 'update']);
+    Route::resource('users', UserController::class)->only(['index', 'update', 'destroy']);
 });
+
 
 
 

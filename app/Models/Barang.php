@@ -16,9 +16,10 @@ class Barang extends Model
      */
     protected $fillable = [
         'nama_barang',
-        'kode_barang', // <-- PASTIKAN BARIS INI ADA
+        'kode_barang', 
         'tipe',
         'stok',
         'gambar',
+        'deskripsi',
     ];
 }

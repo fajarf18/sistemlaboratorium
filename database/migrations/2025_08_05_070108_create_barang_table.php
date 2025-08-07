@@ -14,10 +14,12 @@ return new class extends Migration
         Schema::create('barangs', function (Blueprint $table) {
             $table->id();
             $table->string('nama_barang');
-            $table->string('kode_barang')->unique(); // <-- KOLOM YANG HILANG SUDAH DITAMBAHKAN
-            $table->string('tipe'); // Contoh: "Habis Pakai", "Tidak Habis Pakai"
+            $table->string('kode_barang')->unique();
+            $table->string('tipe');
             $table->integer('stok');
-            $table->string('gambar')->nullable(); // Path ke gambar barang
+            $table->string('gambar')->nullable();
+            // Kolom deskripsi ditambahkan langsung di sini
+            $table->text('deskripsi')->nullable(); 
             $table->timestamps();
         });
     }
@@ -27,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('barangs'); // Diperbaiki dari 'barang' menjadi 'barangs'
+        Schema::dropIfExists('barangs');
     }
 };

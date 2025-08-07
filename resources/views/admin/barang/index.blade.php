@@ -5,31 +5,59 @@
         </h2>
     </x-slot>
 
-    {{-- Inisialisasi Alpine.js untuk semua modal --}}
     <div x-data="{ 
-        showAddModal: false, 
-        showEditModal: false,
+        showAddModal: @if($errors->any() && old('form_type') === 'add') true @else false @endif, 
+        showEditModal: @if($errors->any() && old('form_type') === 'edit') true @else false @endif,
         showDeleteModal: false, 
-        editItem: {},
+        showPreviewModal: false,
+        editItem: @if($errors->any() && old('form_type') === 'edit') {{ json_encode(old()) }} @else {} @endif,
+        previewItem: {},
         itemToDelete: '', 
         deleteAction: ''
-    }" @keydown.escape.window="showAddModal = false; showEditModal = false; showDeleteModal = false">
+    }" @keydown.escape.window="showAddModal = false; showEditModal = false; showDeleteModal = false; showPreviewModal = false">
         
+        @if (session('success'))
+            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4" role="alert">
+                <p class="font-bold">Sukses</p>
+                <p>{{ session('success') }}</p>
+            </div>
+        @endif
+
+        @if ($errors->any())
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
+                <p class="font-bold">Terjadi Kesalahan</p>
+                <ul class="mt-2 list-disc list-inside">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <div class="bg-white p-6 rounded-xl shadow-sm">
             {{-- Header Aksi --}}
             <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                <div class="relative w-full md:w-1/3">
-                    <input type="text" placeholder="Cari Barang" class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
+                {{-- Form Pencarian --}}
+                <form action="{{ route('admin.barang.index') }}" method="GET" class="relative w-full md:w-1/3">
+                    <input type="text" name="search" placeholder="Cari Nama atau ID Barang..."
+                           value="{{ $search ?? '' }}"
+                           class="pl-4 pr-10 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button type="submit" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                        </svg>
+                    </button>
+                </form>
                 <div class="flex items-center gap-2">
-                    <button class="flex items-center gap-2 px-4 py-2 border border-gray-300 text-sm font-semibold text-gray-700 rounded-lg hover:bg-gray-50">
+                    <a href="{{ route('admin.barang.download') }}" class="flex items-center gap-2 px-4 py-2 border border-gray-300 text-sm font-semibold text-gray-700 rounded-lg hover:bg-gray-50">
                         <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
                         Download
-                    </button>
+                    </a>
                     <button @click="showAddModal = true" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-sm font-semibold text-white rounded-lg hover:bg-blue-700">
                         <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                         Tambah Barang
                     </button>
+                    {{-- Tombol Filter dikembalikan di sini --}}
                     <button class="flex items-center gap-2 px-4 py-2 border border-gray-300 text-sm font-semibold text-gray-700 rounded-lg hover:bg-gray-50">
                          <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.572a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" /></svg>
                         Filter
@@ -37,13 +65,6 @@
                 </div>
             </div>
             
-            @if (session('success'))
-                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-                    <span class="block sm:inline">{{ session('success') }}</span>
-                </div>
-            @endif
-
-            {{-- Tabel Data Barang --}}
             <div class="overflow-x-auto">
                 <table class="w-full min-w-[800px] text-sm text-left">
                     <thead class="bg-gray-50 text-gray-600">
@@ -70,8 +91,10 @@
                                 <td class="p-4 text-gray-500">{{ $barang->stok }} pcs</td>
                                 <td class="p-4">
                                     <div class="flex gap-2">
-                                        <button class="p-2 bg-yellow-400 text-white rounded-md hover:bg-yellow-500"><svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639l4.43-4.43a1.012 1.012 0 011.43 0l4.43 4.43a1.012 1.012 0 010 1.43l-4.43 4.43a1.012 1.012 0 01-1.43 0l-4.43-4.43zM12.036 12.322a1.012 1.012 0 010-.639l4.43-4.43a1.012 1.012 0 011.43 0l4.43 4.43a1.012 1.012 0 010 1.43l-4.43 4.43a1.012 1.012 0 01-1.43 0l-4.43-4.43z" /></svg></button>
-                                        <button @click="showEditModal = true; editItem = @json($barang)" class="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                        <button @click="showPreviewModal = true; previewItem = {{ json_encode($barang) }}" class="p-2 bg-yellow-400 text-white rounded-md hover:bg-yellow-500">
+                                            <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639l4.43-4.43a1.012 1.012 0 011.43 0l4.43 4.43a1.012 1.012 0 010 1.43l-4.43 4.43a1.012 1.012 0 01-1.43 0l-4.43-4.43zM12.036 12.322a1.012 1.012 0 010-.639l4.43-4.43a1.012 1.012 0 011.43 0l4.43 4.43a1.012 1.012 0 010 1.43l-4.43 4.43a1.012 1.012 0 01-1.43 0l-4.43-4.43z" /></svg>
+                                        </button>
+                                        <button @click="showEditModal = true; editItem = {{ json_encode($barang) }}" class="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
                                             <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
                                         </button>
                                         <button @click="showDeleteModal = true; itemToDelete = '{{ $barang->nama_barang }}'; deleteAction = '{{ route('admin.barang.destroy', $barang) }}'" class="p-2 bg-red-500 text-white rounded-md hover:bg-red-600">
@@ -81,13 +104,23 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="7" class="p-4 text-center text-gray-500">Tidak ada data barang.</td></tr>
+                            <tr><td colspan="7" class="p-4 text-center text-gray-500">
+                                @if ($search)
+                                    Tidak ada barang yang cocok dengan pencarian "<span class="font-semibold">{{ $search }}</span>".
+                                @else
+                                    Tidak ada data barang.
+                                @endif
+                            </td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
-        </div>
 
+            {{-- Link Paginasi --}}
+            <div class="mt-6">
+                {{ $barangs->links() }}
+            </div>
+        </div>
         {{-- Modal untuk Tambah Barang --}}
         <div x-show="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
             <div @click.away="showAddModal = false" class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 mx-4">
@@ -99,16 +132,17 @@
                 </div>
                 <form action="{{ route('admin.barang.store') }}" method="POST" enctype="multipart/form-data" class="mt-4 space-y-4">
                     @csrf
+                    <input type="hidden" name="form_type" value="add">
                     <div>
                         <label for="nama_barang" class="block text-sm font-medium text-gray-700">Nama Barang <span class="text-red-500">*</span></label>
-                        <input type="text" name="nama_barang" id="nama_barang" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                        <input type="text" name="nama_barang" id="nama_barang" value="{{ old('nama_barang') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
                     </div>
                     <div>
                         <label for="tipe" class="block text-sm font-medium text-gray-700">Tipe <span class="text-red-500">*</span></label>
                         <select name="tipe" id="tipe" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
                             <option value="">Pilih Tipe</option>
-                            <option value="Habis Pakai">Habis Pakai</option>
-                            <option value="Tidak Habis Pakai">Tidak Habis Pakai</option>
+                            <option value="Habis Pakai" @selected(old('tipe') == 'Habis Pakai')>Habis Pakai</option>
+                            <option value="Tidak Habis Pakai" @selected(old('tipe') == 'Tidak Habis Pakai')>Tidak Habis Pakai</option>
                         </select>
                     </div>
                     <div>
@@ -117,11 +151,11 @@
                     </div>
                     <div>
                         <label for="stok" class="block text-sm font-medium text-gray-700">Stock Barang <span class="text-red-500">*</span></label>
-                        <input type="number" name="stok" id="stok" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                        <input type="number" name="stok" id="stok" value="{{ old('stok') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
                     </div>
                     <div>
                         <label for="deskripsi" class="block text-sm font-medium text-gray-700">Deskripsi</label>
-                        <textarea name="deskripsi" id="deskripsi" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"></textarea>
+                        <textarea name="deskripsi" id="deskripsi" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">{{ old('deskripsi') }}</textarea>
                     </div>
                     <div class="flex justify-end gap-4 pt-4">
                         <button type="button" @click="showAddModal = false" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Batal</button>
@@ -140,9 +174,11 @@
                         <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
-                <form :action="`/admin/barang/${editItem.id}`" method="POST" enctype="multipart/form-data" class="mt-4 space-y-4">
+                <form :action="'/admin/barang/' + editItem.id" method="POST" enctype="multipart/form-data" class="mt-4 space-y-4">
                     @csrf
                     @method('PUT')
+                    <input type="hidden" name="form_type" value="edit">
+                    <input type="hidden" name="id" :value="editItem.id">
                     <div>
                         <label for="edit_nama_barang" class="block text-sm font-medium text-gray-700">Nama Barang <span class="text-red-500">*</span></label>
                         <input type="text" name="nama_barang" id="edit_nama_barang" x-model="editItem.nama_barang" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
@@ -176,6 +212,48 @@
                         <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Simpan Perubahan</button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        {{-- Modal untuk Preview Barang --}}
+        <div x-show="showPreviewModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
+            <div @click.away="showPreviewModal = false" class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 mx-4">
+                <div class="flex justify-between items-center pb-3 border-b">
+                    <h3 class="text-lg font-semibold" x-text="'Detail ' + previewItem.nama_barang"></h3>
+                    <button @click="showPreviewModal = false" class="text-gray-400 hover:text-gray-600">
+                        <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div class="mt-4 space-y-4">
+                    <div class="flex justify-center">
+                        <img :src="previewItem.gambar ? '/storage/' + previewItem.gambar : 'https://placehold.co/300x200/e2e8f0/334155?text=Gambar'" :alt="previewItem.nama_barang" class="w-full max-w-sm h-auto object-cover rounded-lg">
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p class="text-gray-500">ID Barang</p>
+                            <p class="font-semibold" x-text="previewItem.kode_barang"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">Tipe</p>
+                            <p class="font-semibold" x-text="previewItem.tipe"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">Stok Tersedia</p>
+                            <p class="font-semibold" x-text="previewItem.stok + ' pcs'"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">Tanggal Ditambahkan</p>
+                            <p class="font-semibold" x-text="new Date(previewItem.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })"></p>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Deskripsi</p>
+                        <p class="mt-1" x-text="previewItem.deskripsi || 'Tidak ada deskripsi.'"></p>
+                    </div>
+                </div>
+                <div class="flex justify-end pt-4 mt-4 border-t">
+                    <button type="button" @click="showPreviewModal = false" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Tutup</button>
+                </div>
             </div>
         </div>
 

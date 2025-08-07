@@ -12,12 +12,26 @@ use Illuminate\Validation\Rule;
 class BarangController extends Controller
 {
     /**
-     * Menampilkan halaman list semua barang.
+     * Menampilkan halaman list semua barang dengan fitur pencarian.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
-        $barangs = Barang::latest()->get();
-        return view('admin.barang.index', ['barangs' => $barangs]);
+        $search = $request->input('search');
+        $query = Barang::query();
+
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('nama_barang', 'like', '%' . $search . '%')
+                  ->orWhere('kode_barang', 'like', '%' . $search . '%');
+            });
+        }
+
+        $barangs = $query->latest()->paginate(10)->withQueryString();
+
+        return view('admin.barang.index', [
+            'barangs' => $barangs,
+            'search' => $search,
+        ]);
     }
 
     /**
@@ -59,16 +73,6 @@ class BarangController extends Controller
     }
 
     /**
-     * Menghapus barang dari database.
-     */
-    public function destroy(Barang $barang)
-    {
-        if ($barang->gambar) { Storage::delete('public/' . $barang->gambar); }
-        $barang->delete();
-        return redirect()->route('admin.barang.index')->with('success', 'Barang berhasil dihapus.');
-    }
-
-    /**
      * Memperbarui data barang di database.
      */
     public function update(Request $request, Barang $barang)
@@ -99,5 +103,58 @@ class BarangController extends Controller
         ]);
 
         return redirect()->route('admin.barang.index')->with('success', 'Barang berhasil diperbarui.');
+    }
+
+    /**
+     * Menghapus barang dari database.
+     */
+    public function destroy(Barang $barang)
+    {
+        if ($barang->gambar) { Storage::delete('public/' . $barang->gambar); }
+        $barang->delete();
+        return redirect()->route('admin.barang.index')->with('success', 'Barang berhasil dihapus.');
+    }
+
+    /**
+     * Men-download data barang sebagai file CSV.
+     */
+    public function download()
+    {
+        $barangs = Barang::all();
+        $fileName = "data-barang-" . date('Y-m-d') . ".csv";
+
+        $headers = array(
+            "Content-type"        => "text/csv",
+            "Content-Disposition" => "attachment; filename=$fileName",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        );
+
+        $columns = array('ID Barang', 'Nama Barang', 'Tipe', 'Stok', 'Deskripsi', 'Tanggal Dibuat');
+
+        $callback = function() use($barangs, $columns) {
+            $file = fopen('php://output', 'w');
+            fwrite($file, "\xEF\xBB\xBF");
+            fputcsv($file, $columns, ';');
+
+            foreach ($barangs as $barang) {
+                $idBarang = '="' . $barang->kode_barang . '"';
+                $tanggalDibuat = '="' . $barang->created_at->format('d/m/Y') . '"';
+
+                fputcsv($file, [
+                    $idBarang,
+                    $barang->nama_barang,
+                    $barang->tipe,
+                    $barang->stok,
+                    $barang->deskripsi,
+                    $tanggalDibuat
+                ], ';');
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }
