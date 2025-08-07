@@ -69,12 +69,23 @@ class KembalikanBarangController extends Controller
                 
                 $peminjamanIdsToUpdate[] = $detail->peminjaman_id;
                 
-                // LOGIKA PENAMBAHAN STOK DIHAPUS DARI SINI
-                // Stok akan dikembalikan oleh admin setelah konfirmasi
+                $jumlahDipinjam = (int)$itemData['jumlah'];
+                $jumlahDikembalikan = (int)$itemData['jumlahDikembalikan'];
+
+                if ($jumlahDikembalikan < $jumlahDipinjam) {
+                    $jumlahHilang = $jumlahDipinjam - $jumlahDikembalikan;
+
+                    // Kurangi jumlah pinjaman dengan jumlah yang hilang
+                    $detail->jumlah = $jumlahDikembalikan;
+                    
+                    // Catat jumlah barang yang hilang
+                    // (Akumulasi jika ada proses pengembalian/kehilangan sebelumnya pada item yang sama)
+                    $detail->jumlah_hilang = ($detail->jumlah_hilang ?? 0) + $jumlahHilang; 
+                    $detail->save();
+                }
             }
             
             if (!empty($peminjamanIdsToUpdate)) {
-                // UBAH STATUS MENJADI TUNGGU KONFIRMASI ADMIN
                 Peminjaman::whereIn('id', array_unique($peminjamanIdsToUpdate))
                     ->update([
                         'status' => 'Tunggu Konfirmasi Admin',

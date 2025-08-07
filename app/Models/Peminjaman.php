@@ -8,9 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Peminjaman extends Model
 {
     use HasFactory;
-
     protected $table = 'peminjamans';
-
     protected $fillable = [
         'user_id',
         'tanggal_pinjam',
@@ -19,12 +17,22 @@ class Peminjaman extends Model
         'status',
     ];
 
-    /**
-     * Mendefinisikan relasi "satu ke banyak".
-     * Satu peminjaman bisa memiliki banyak detail peminjaman.
-     */
     public function detailPeminjamans()
     {
         return $this->hasMany(DetailPeminjaman::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Mendefinisikan relasi "satu ke satu".
+     * Satu peminjaman akan memiliki satu histori pengembalian.
+     */
+    public function history()
+    {
+        return $this->hasOne(HistoryPeminjaman::class);
     }
 }

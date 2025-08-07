@@ -11,6 +11,7 @@ use App\Http\Controllers\UserDashboardController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\BarangController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\KonfirmasiController;
 
 // Rute untuk tamu (landing page)
 Route::get('/', function () {
@@ -46,6 +47,12 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::resource('users', UserController::class)->only(['index']);
     Route::resource('users', UserController::class)->only(['index', 'update']);
     Route::resource('users', UserController::class)->only(['index', 'update', 'destroy']);
+    Route::get('/konfirmasi', [KonfirmasiController::class, 'index'])->name('konfirmasi.index');
+    Route::get('/konfirmasi/{id}', [KonfirmasiController::class, 'show'])->name('konfirmasi.show');
+    Route::post('/konfirmasi/peminjaman/{id}/terima', [KonfirmasiController::class, 'terimaPeminjaman'])->name('konfirmasi.peminjaman.terima');
+    Route::post('/konfirmasi/peminjaman/{id}/tolak', [KonfirmasiController::class, 'tolakPeminjaman'])->name('konfirmasi.peminjaman.tolak');
+    Route::post('/konfirmasi/pengembalian/{id}/terima', [KonfirmasiController::class, 'terimaPengembalian'])->name('konfirmasi.pengembalian.terima');
+    Route::post('/konfirmasi/pengembalian/{id}/tolak', [KonfirmasiController::class, 'tolakPengembalian'])->name('konfirmasi.pengembalian.tolak');
 });
 
 
@@ -75,7 +82,7 @@ Route::middleware('auth')->prefix('user')->name('user.')->group(function () {
     // RUTE BARU
     Route::post('/kembalikan-barang/konfirmasi', [KembalikanBarangController::class, 'konfirmasi'])->name('kembalikan.konfirmasi');
         Route::get('/history-peminjaman', [HistoryPeminjamanController::class, 'index'])->name('history.index');
-    Route::get('/history-peminjaman/{id}', [HistoryPeminjamanController::class, 'show'])->name('history.show');
+        Route::get('/history-peminjaman/detail/{id}', [HistoryPeminjamanController::class, 'show'])->name('history.show');
     
     // ... rute user lainnya ...
 });

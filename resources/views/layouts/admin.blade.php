@@ -7,7 +7,8 @@
     <title>{{ config('app.name', 'Laravel') }} - Admin</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    {{-- Alpine.js sudah ada, ini bagus --}}
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body 
@@ -23,12 +24,14 @@
         
         @include('layouts.partials.admin-navbar')
 
-        {{-- BAGIAN PENTING ADA DI SINI --}}
         <main class="p-4 sm:p-6 md:p-8">
-            {{-- Variabel '$slot' ini akan mencetak semua konten dari file index.blade.php --}}
             {{ $slot }}
         </main>
 
     </div>
+
+    {{-- TAMBAHKAN BARIS INI --}}
+    {{-- Ini akan memuat semua skrip yang di-'push' dari halaman lain --}}
+    @stack('scripts')
 </body>
 </html>

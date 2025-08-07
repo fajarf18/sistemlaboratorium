@@ -46,16 +46,33 @@
                         @endif
                     </th>
                     <td class="px-6 py-4">
-                        <img src="{{ $item->barang->gambar ?? 'https://placehold.co/100' }}" alt="{{ $item->barang->nama_barang }}" class="w-12 h-12 object-cover rounded">
+                        {{-- Pastikan ada fallback jika gambar tidak ada --}}
+                        <img src="{{ optional($item->barang)->gambar ? asset('storage/' . $item->barang->gambar) : 'https://placehold.co/100' }}" alt="{{ $item->barang->nama_barang }}" class="w-12 h-12 object-cover rounded">
                     </td>
                     <td class="px-6 py-4">{{ $item->barang->tipe }}</td>
                     <td class="px-6 py-4">
+                        {{-- PERBAIKAN ADA DI FORM INI --}}
                         <form action="{{ route('user.keranjang.update', $item->id) }}" method="POST" class="flex items-center justify-center space-x-2">
                             @csrf
                             @method('PATCH')
-                            <button type="button" onclick="this.nextElementSibling.stepDown()" class="px-2 py-1 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-100">-</button>
-                            <input type="number" name="jumlah" value="{{ $item->jumlah }}" min="1" max="{{ $item->barang->stok }}" onchange="this.form.submit()" class="w-16 text-center border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                            <button type="button" onclick="this.previousElementSibling.stepUp()" class="px-2 py-1 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-100">+</button>
+                            
+                            {{-- Tombol Minus: ditambahkan this.form.submit() --}}
+                            <button type="button" 
+                                    onclick="this.nextElementSibling.stepDown(); this.form.submit();" 
+                                    class="px-2 py-1 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-100">-</button>
+                            
+                            <input type="number" 
+                                   name="jumlah" 
+                                   value="{{ $item->jumlah }}" 
+                                   min="1" 
+                                   max="{{ $item->barang->stok }}" 
+                                   onchange="this.form.submit()" 
+                                   class="w-16 text-center border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            
+                            {{-- Tombol Plus: ditambahkan this.form.submit() --}}
+                            <button type="button" 
+                                    onclick="this.previousElementSibling.stepUp(); this.form.submit();" 
+                                    class="px-2 py-1 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-100">+</button>
                         </form>
                     </td>
                     <td class="px-6 py-4 text-center">

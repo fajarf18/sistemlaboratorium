@@ -47,17 +47,22 @@ class BarangController extends Controller
             'deskripsi' => 'nullable|string',
         ]);
 
+        // Membuat Kode Barang Otomatis
         $lastBarang = Barang::orderBy('id', 'desc')->first();
         if ($lastBarang) {
             $lastNumber = (int) substr($lastBarang->kode_barang, 1);
             $newNumber = $lastNumber + 1;
-        } else { $newNumber = 1; }
+        } else {
+            $newNumber = 1;
+        }
         $newKodeBarang = 'A' . str_pad($newNumber, 2, '0', STR_PAD_LEFT);
 
         $path = null;
         if ($request->hasFile('gambar')) {
-            $path = $request->file('gambar')->store('public/barang');
-            $path = str_replace('public/', '', $path);
+            // Cara yang lebih baik: Sebutkan folder dan disk secara eksplisit.
+            // Ini akan menyimpan file di 'storage/app/public/barang'
+            // dan mengembalikan path 'barang/namafile.jpg'
+            $path = $request->file('gambar')->store('barang', 'public');
         }
 
         Barang::create([
@@ -88,9 +93,12 @@ class BarangController extends Controller
 
         $path = $barang->gambar;
         if ($request->hasFile('gambar')) {
-            if ($barang->gambar) { Storage::delete('public/' . $barang->gambar); }
-            $path = $request->file('gambar')->store('public/barang');
-            $path = str_replace('public/', '', $path);
+            // Hapus gambar lama jika ada
+            if ($barang->gambar) {
+                Storage::disk('public')->delete($barang->gambar);
+            }
+            // Simpan gambar baru
+            $path = $request->file('gambar')->store('barang', 'public');
         }
 
         $barang->update([
@@ -110,11 +118,13 @@ class BarangController extends Controller
      */
     public function destroy(Barang $barang)
     {
-        if ($barang->gambar) { Storage::delete('public/' . $barang->gambar); }
+        // Hapus gambar dari storage jika ada
+        if ($barang->gambar) {
+            Storage::disk('public')->delete($barang->gambar);
+        }
         $barang->delete();
         return redirect()->route('admin.barang.index')->with('success', 'Barang berhasil dihapus.');
     }
-
     /**
      * Men-download data barang sebagai file CSV.
      */
