@@ -17,8 +17,10 @@ class BarangController extends Controller
     public function index(Request $request): View
     {
         $search = $request->input('search');
+        $tipe = $request->input('tipe'); // Ambil input filter tipe
         $query = Barang::query();
 
+        // Terapkan filter pencarian jika ada
         if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('nama_barang', 'like', '%' . $search . '%')
@@ -26,11 +28,17 @@ class BarangController extends Controller
             });
         }
 
+        // Terapkan filter tipe jika ada dan bukan "semua"
+        if ($tipe) {
+            $query->where('tipe', $tipe);
+        }
+
         $barangs = $query->latest()->paginate(10)->withQueryString();
 
         return view('admin.barang.index', [
             'barangs' => $barangs,
             'search' => $search,
+            'tipe' => $tipe, // Kirim nilai filter ke view
         ]);
     }
 

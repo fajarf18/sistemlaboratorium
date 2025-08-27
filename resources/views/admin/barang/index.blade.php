@@ -1,28 +1,52 @@
 <x-admin-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('List Barang') }}
+            {{ __('Manajemen Barang') }}
         </h2>
     </x-slot>
 
+    {{-- Logika Alpine.js untuk mengelola state modal --}}
     <div x-data="{ 
-        showAddModal: @if($errors->any() && old('form_type') === 'add') true @else false @endif, 
-        showEditModal: @if($errors->any() && old('form_type') === 'edit') true @else false @endif,
-        showDeleteModal: false, 
-        showPreviewModal: false,
-        editItem: @if($errors->any() && old('form_type') === 'edit') {{ json_encode(old()) }} @else {} @endif,
-        previewItem: {},
-        itemToDelete: '', 
-        deleteAction: ''
-    }" @keydown.escape.window="showAddModal = false; showEditModal = false; showDeleteModal = false; showPreviewModal = false">
+            showAddModal: @if($errors->any() && old('form_type') === 'add') true @else false @endif, 
+            showEditModal: @if($errors->any() && old('form_type') === 'edit') true @else false @endif,
+            showDeleteModal: false, 
+            showPreviewModal: false,
+            editItem: @if($errors->any() && old('form_type') === 'edit') {{ json_encode(old()) }} @else {} @endif,
+            previewItem: {},
+            itemToDelete: '', 
+            deleteAction: '',
+            addPreviewUrl: null,
+            editPreviewUrl: null,
+            handleFileChange(event, type) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        if (type === 'add') this.addPreviewUrl = e.target.result;
+                        else if (type === 'edit') this.editPreviewUrl = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            },
+            resetAddModal() {
+                this.showAddModal = false;
+                this.addPreviewUrl = null;
+                document.getElementById('addBarangForm').reset();
+            },
+            resetEditModal() {
+                this.showEditModal = false;
+                this.editPreviewUrl = null;
+            }
+         }" 
+         @keydown.escape.window="resetAddModal(); resetEditModal(); showDeleteModal = false; showPreviewModal = false">
         
+        {{-- Notifikasi --}}
         @if (session('success'))
             <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4" role="alert">
                 <p class="font-bold">Sukses</p>
                 <p>{{ session('success') }}</p>
             </div>
         @endif
-
         @if ($errors->any())
             <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
                 <p class="font-bold">Terjadi Kesalahan</p>
@@ -35,69 +59,73 @@
         @endif
 
         <div class="bg-white p-6 rounded-xl shadow-sm">
-            {{-- Header Aksi --}}
+            {{-- Header Aksi, Filter, dan Pencarian (RESPONSIF & STABIL) --}}
             <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                {{-- Form Pencarian --}}
-                <form action="{{ route('admin.barang.index') }}" method="GET" class="relative w-full md:w-1/3">
-                    <input type="text" name="search" placeholder="Cari Nama atau ID Barang..."
-                           value="{{ $search ?? '' }}"
-                           class="pl-4 pr-10 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <button type="submit" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
-                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                        </svg>
+                
+                {{-- Tombol Aksi (Kiri di Desktop, Atas di Mobile) --}}
+                <div class="flex items-center gap-2 w-full md:w-auto">
+                    <button @click="showAddModal = true" class="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-sm font-semibold text-white rounded-lg hover:bg-blue-700">
+                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                        Tambah
                     </button>
-                </form>
-                <div class="flex items-center gap-2">
-                    <a href="{{ route('admin.barang.download') }}" class="flex items-center gap-2 px-4 py-2 border border-gray-300 text-sm font-semibold text-gray-700 rounded-lg hover:bg-gray-50">
+                    <a href="{{ route('admin.barang.download') }}" class="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-sm font-semibold text-gray-700 rounded-lg hover:bg-gray-50">
                         <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
                         Download
                     </a>
-                    <button @click="showAddModal = true" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-sm font-semibold text-white rounded-lg hover:bg-blue-700">
-                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                        Tambah Barang
-                    </button>
-                    {{-- Tombol Filter dikembalikan di sini --}}
-                    <button class="flex items-center gap-2 px-4 py-2 border border-gray-300 text-sm font-semibold text-gray-700 rounded-lg hover:bg-gray-50">
-                         <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.572a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" /></svg>
-                        Filter
-                    </button>
                 </div>
+
+                {{-- Form untuk Filter dan Pencarian (Kanan di Desktop, Bawah di Mobile) --}}
+                <form action="{{ route('admin.barang.index') }}" method="GET" class="flex items-center gap-x-2 w-full md:w-auto">
+                    
+                    <select name="tipe" onchange="this.form.submit()" class="form-select-custom border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        <option value="">Semua Tipe</option>
+                        <option value="Habis Pakai" @selected(request('tipe') == 'Habis Pakai')>Habis Pakai</option>
+                        <option value="Tidak Habis Pakai" @selected(request('tipe') == 'Tidak Habis Pakai')>Tidak Habis Pakai</option>
+                    </select>
+                    
+                    <div class="relative flex-1">
+                        <input type="text" name="search" placeholder="Cari barang..." value="{{ $search ?? '' }}" class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        <button type="submit" class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 hover:text-gray-600">
+                            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+                        </button>
+                    </div>
+                </form>
             </div>
             
+            {{-- Tabel Barang (Hanya bagian ini yang akan scroll jika perlu) --}}
             <div class="overflow-x-auto">
                 <table class="w-full min-w-[800px] text-sm text-left">
                     <thead class="bg-gray-50 text-gray-600">
                         <tr>
                             <th class="p-4 w-16 font-semibold">No.</th>
-                            <th class="p-4 font-semibold">Asset name</th>
-                            <th class="p-4 font-semibold">Image</th>
+                            <th class="p-4 font-semibold">Nama Barang</th>
+                            <th class="p-4 font-semibold">Gambar</th>
                             <th class="p-4 font-semibold">ID Barang</th>
                             <th class="p-4 font-semibold">Tipe</th>
-                            <th class="p-4 font-semibold">Stock</th>
+                            <th class="p-4 font-semibold">Stok</th>
                             <th class="p-4 font-semibold">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @forelse ($barangs as $barang)
                             <tr>
-                                <td class="p-4 text-center text-gray-500">{{ $loop->iteration }}</td>
+                                <td class="p-4 text-center text-gray-500">{{ $loop->iteration + $barangs->firstItem() - 1 }}</td>
                                 <td class="p-4 text-gray-800 font-medium">{{ $barang->nama_barang }}</td>
                                 <td class="p-4">
-                                    <img src="{{ $barang->gambar ? asset('storage/' . $barang->gambar) : 'https://placehold.co/64x48/e2e8f0/334155?text=Gambar' }}" alt="{{ $barang->nama_barang }}" class="w-16 h-12 object-cover rounded-md">
+                                    <img src="{{ Str::startsWith($barang->gambar, 'http') ? $barang->gambar : asset('storage/' . $barang->gambar) }}" alt="{{ $barang->nama_barang }}" class="w-16 h-12 object-cover rounded-md">
                                 </td>
                                 <td class="p-4 text-gray-500">{{ $barang->kode_barang }}</td>
                                 <td class="p-4 text-gray-500">{{ $barang->tipe }}</td>
                                 <td class="p-4 text-gray-500">{{ $barang->stok }} pcs</td>
                                 <td class="p-4">
                                     <div class="flex gap-2">
-                                        <button @click="showPreviewModal = true; previewItem = {{ json_encode($barang) }}" class="p-2 bg-yellow-400 text-white rounded-md hover:bg-yellow-500">
+                                        <button @click="showPreviewModal = true; previewItem = {{ json_encode($barang) }}" class="p-2 bg-yellow-400 text-white rounded-md hover:bg-yellow-500" title="Lihat Detail">
                                             <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639l4.43-4.43a1.012 1.012 0 011.43 0l4.43 4.43a1.012 1.012 0 010 1.43l-4.43 4.43a1.012 1.012 0 01-1.43 0l-4.43-4.43zM12.036 12.322a1.012 1.012 0 010-.639l4.43-4.43a1.012 1.012 0 011.43 0l4.43 4.43a1.012 1.012 0 010 1.43l-4.43 4.43a1.012 1.012 0 01-1.43 0l-4.43-4.43z" /></svg>
                                         </button>
-                                        <button @click="showEditModal = true; editItem = {{ json_encode($barang) }}" class="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                        <button @click="showEditModal = true; editItem = {{ json_encode($barang) }}" class="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700" title="Edit Barang">
                                             <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
                                         </button>
-                                        <button @click="showDeleteModal = true; itemToDelete = '{{ $barang->nama_barang }}'; deleteAction = '{{ route('admin.barang.destroy', $barang) }}'" class="p-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+                                        <button @click="showDeleteModal = true; itemToDelete = '{{ $barang->nama_barang }}'; deleteAction = '{{ route('admin.barang.destroy', $barang) }}'" class="p-2 bg-red-500 text-white rounded-md hover:bg-red-600" title="Hapus Barang">
                                             <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                                         </button>
                                     </div>
@@ -105,8 +133,8 @@
                             </tr>
                         @empty
                             <tr><td colspan="7" class="p-4 text-center text-gray-500">
-                                @if ($search)
-                                    Tidak ada barang yang cocok dengan pencarian "<span class="font-semibold">{{ $search }}</span>".
+                                @if ($search || $tipe)
+                                    Tidak ada barang yang cocok dengan filter atau pencarian Anda.
                                 @else
                                     Tidak ada data barang.
                                 @endif
@@ -123,7 +151,7 @@
         </div>
         {{-- Modal untuk Tambah Barang --}}
         <div x-show="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
-            <div @click.away="showAddModal = false" class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 mx-4">
+            <div @click.away="showAddModal = false" class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center pb-3 border-b">
                     <h3 class="text-lg font-semibold">Tambah Barang</h3>
                     <button @click="showAddModal = false" class="text-gray-400 hover:text-gray-600">
@@ -167,7 +195,7 @@
 
         {{-- Modal untuk Edit Barang --}}
         <div x-show="showEditModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
-            <div @click.away="showEditModal = false" class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 mx-4">
+            <div @click.away="showEditModal = false" class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center pb-3 border-b">
                     <h3 class="text-lg font-semibold">Edit Barang</h3>
                     <button @click="showEditModal = false" class="text-gray-400 hover:text-gray-600">
@@ -217,7 +245,7 @@
 
         {{-- Modal untuk Preview Barang --}}
         <div x-show="showPreviewModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
-            <div @click.away="showPreviewModal = false" class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 mx-4">
+            <div @click.away="showPreviewModal = false" class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 mx-4 max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center pb-3 border-b">
                     <h3 class="text-lg font-semibold" x-text="'Detail ' + previewItem.nama_barang"></h3>
                     <button @click="showPreviewModal = false" class="text-gray-400 hover:text-gray-600">
@@ -226,7 +254,9 @@
                 </div>
                 <div class="mt-4 space-y-4">
                     <div class="flex justify-center">
-                        <img :src="previewItem.gambar ? '/storage/' + previewItem.gambar : 'https://placehold.co/300x200/e2e8f0/334155?text=Gambar'" :alt="previewItem.nama_barang" class="w-full max-w-sm h-auto object-cover rounded-lg">
+                            <img :src="previewItem.gambar ? (previewItem.gambar.startsWith('http') ? previewItem.gambar : '/storage/' + previewItem.gambar) : 'https://placehold.co/300x200/e2e8f0/334155?text=Gambar'" 
+                     :alt="previewItem.nama_barang" 
+                     class="w-16 max-w-sm h-auto object-cover rounded-lg">
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>

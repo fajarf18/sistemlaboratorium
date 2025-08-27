@@ -14,12 +14,6 @@ class DashboardController extends Controller
      */
     public function index(): View
     {
-        // 2. Ambil 5 data barang terbaru dari database
-        $barangs = Barang::latest()->take(5)->get();
-
-        // 3. Kirim data ke view
-        return view('admin.dashboard', [
-            'barangs' => $barangs
-        ]);
+        return view('admin.dashboard');
     }
 }

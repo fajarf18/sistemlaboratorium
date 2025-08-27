@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\BarangController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\KonfirmasiController;
+use App\Http\Controllers\Admin\HistoryController;
 
 // Rute untuk tamu (landing page)
 Route::get('/', function () {
@@ -44,6 +45,8 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
         'index', 'store', 'update', 'destroy'
     ]);
     //Pengaturan pengguna
+    Route::get('users/download', [UserController::class, 'download'])->name('users.download');
+    Route::resource('users', UserController::class)->only(['index', 'update', 'destroy']);
     Route::resource('users', UserController::class)->only(['index']);
     Route::resource('users', UserController::class)->only(['index', 'update']);
     Route::resource('users', UserController::class)->only(['index', 'update', 'destroy']);
@@ -53,6 +56,8 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::post('/konfirmasi/peminjaman/{id}/tolak', [KonfirmasiController::class, 'tolakPeminjaman'])->name('konfirmasi.peminjaman.tolak');
     Route::post('/konfirmasi/pengembalian/{id}/terima', [KonfirmasiController::class, 'terimaPengembalian'])->name('konfirmasi.pengembalian.terima');
     Route::post('/konfirmasi/pengembalian/{id}/tolak', [KonfirmasiController::class, 'tolakPengembalian'])->name('konfirmasi.pengembalian.tolak');
+    Route::get('history/download', [HistoryController::class, 'download'])->name('history.download');
+    Route::resource('history', HistoryController::class)->only(['index', 'show', 'destroy']);
 });
 
 
