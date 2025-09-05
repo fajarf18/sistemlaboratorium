@@ -66,7 +66,7 @@ return [
     */
 
     'timezone' => 'UTC',
-
+    'admin_email' => env('ADMIN_MAIL_ADDRESS', 'admin@example.com'),
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

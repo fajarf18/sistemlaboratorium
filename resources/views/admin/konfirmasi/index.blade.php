@@ -1,5 +1,5 @@
 <x-admin-layout>
-        <x-slot name="header">
+    <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('Konfirmasi Peminjaman dan Pengembalian') }}
         </h2>
@@ -74,7 +74,7 @@
                                 <tr class="bg-white border-b hover:bg-gray-50">
                                     <td class="px-6 py-4 align-middle">{{ $peminjaman->user->nama }}</td>
                                     <td class="px-6 py-4 align-middle">{{ $peminjaman->user->nim }}</td>
-                                    <td class="px-6 py-4 align-middle">{{ \Carbon\Carbon::parse($peminjaman->tanggal_kembali)->format('d F Y') }}</td>
+                                    <td class="px-6 py-4 align-middle">{{ $peminjaman->updated_at->format('d F Y') }}</td>
                                     <td class="px-6 py-4 text-center align-middle">
                                         <span class="inline-block px-3 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
                                             {{ $peminjaman->status }}
@@ -95,6 +95,7 @@
                 </div>
             </div>
 
+            {{-- Modal Detail --}}
             <div x-show="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" style="display: none;">
                 <div @click.outside="showModal = false" class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
                     <div class="flex justify-between items-center mb-4 border-b pb-3">
@@ -128,10 +129,11 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <template x-for="item in detail.detail_peminjamans" :key="item.id">
+                                        {{-- Menggunakan nama relasi yang benar: detail_peminjaman --}}
+                                        <template x-for="item in detail.detail_peminjaman" :key="item.id">
                                             <tr class="border-t">
                                                 <td class="px-4 py-2 text-gray-800" x-text="item.barang.nama_barang"></td>
-                                                <td class="px-4 py-2 text-center text-gray-600" x-text="(item.jumlah + item.jumlah_hilang) + ' pcs'"></td>
+                                                <td class="px-4 py-2 text-center text-gray-600" x-text="(item.jumlah + (item.jumlah_hilang || 0)) + ' pcs'"></td>
                                             </tr>
                                         </template>
                                     </tbody>
@@ -140,7 +142,7 @@
                         </div>
 
                         {{-- Menampilkan Barang yang Hilang (jika ada) --}}
-                        <template x-if="modalType === 'pengembalian' && detail.detail_peminjamans.some(item => item.jumlah_hilang > 0)">
+                        <template x-if="modalType === 'pengembalian' && detail.detail_peminjaman.some(item => item.jumlah_hilang > 0)">
                              <div>
                                 <h4 class="font-semibold text-md mb-2 text-red-600">Barang Hilang</h4>
                                 <div class="border border-red-200 rounded-lg overflow-hidden">
@@ -152,7 +154,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <template x-for="item in detail.detail_peminjamans.filter(i => i.jumlah_hilang > 0)" :key="item.id">
+                                            <template x-for="item in detail.detail_peminjaman.filter(i => i.jumlah_hilang > 0)" :key="item.id">
                                                 <tr class="border-t border-red-200">
                                                     <td class="px-4 py-2 text-red-800" x-text="item.barang.nama_barang"></td>
                                                     <td class="px-4 py-2 text-center text-red-800" x-text="item.jumlah_hilang + ' pcs'"></td>
@@ -161,7 +163,7 @@
                                         </tbody>
                                     </table>
                                 </div>
-                             </div>
+                               </div>
                         </template>
                         
                         {{-- Deskripsi Kehilangan (jika ada) --}}
@@ -206,9 +208,9 @@
                     this.modalType = type;
                     this.modalTitle = type === 'peminjaman' ? 'Detail Permintaan Peminjaman' : 'Detail Permintaan Pengembalian';
                     
-                    // Menggunakan nama rute yang sudah ada
-                    const terimaRoute = type === 'peminjaman' ? '{{ route("admin.konfirmasi.peminjaman.terima", ["id" => ":id"]) }}' : '{{ route("admin.konfirmasi.pengembalian.terima", ["id" => ":id"]) }}';
-                    const tolakRoute = type === 'peminjaman' ? '{{ route("admin.konfirmasi.peminjaman.tolak", ["id" => ":id"]) }}' : '{{ route("admin.konfirmasi.pengembalian.tolak", ["id" => ":id"]) }}';
+                    // --- PERBAIKAN NAMA RUTE ---
+                    const terimaRoute = type === 'peminjaman' ? '{{ route("admin.konfirmasi.terimaPeminjaman", ["id" => ":id"]) }}' : '{{ route("admin.konfirmasi.terimaPengembalian", ["id" => ":id"]) }}';
+                    const tolakRoute = type === 'peminjaman' ? '{{ route("admin.konfirmasi.tolakPeminjaman", ["id" => ":id"]) }}' : '{{ route("admin.konfirmasi.tolakPengembalian", ["id" => ":id"]) }}';
 
                     this.formActionTerima = terimaRoute.replace(':id', id);
                     this.formActionTolak = tolakRoute.replace(':id', id);
@@ -233,3 +235,4 @@
     </script>
     @endpush
 </x-admin-layout>
+

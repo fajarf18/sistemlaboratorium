@@ -14,11 +14,12 @@ class KonfirmasiController extends Controller
      */
     public function index()
     {
-        $peminjamanMenunggu = Peminjaman::with('user')
+        // --- PERBAIKAN 1: Tambahkan 'with()' untuk memuat detail barang ---
+        $peminjamanMenunggu = Peminjaman::with('user', 'detailPeminjaman.barang')
             ->where('status', 'Menunggu Konfirmasi')
             ->latest()->get();
 
-        $pengembalianMenunggu = Peminjaman::with('user', 'history')
+        $pengembalianMenunggu = Peminjaman::with('user', 'detailPeminjaman.barang')
             ->where('status', 'Tunggu Konfirmasi Admin')
             ->latest()->get();
 
@@ -30,9 +31,10 @@ class KonfirmasiController extends Controller
      */
     public function show($id)
     {
+        // --- PERBAIKAN 2: Sesuaikan nama relasi menjadi 'detailPeminjaman' ---
         $peminjaman = Peminjaman::with([
             'user',
-            'detailPeminjamans.barang',
+            'detailPeminjaman.barang', 
             'history'
         ])->findOrFail($id);
         
@@ -57,16 +59,16 @@ class KonfirmasiController extends Controller
      */
     public function tolakPeminjaman($id)
     {
-        $peminjaman = Peminjaman::with('detailPeminjamans.barang')->where('id', $id)->where('status', 'Menunggu Konfirmasi')->firstOrFail();
+        // Menggunakan nama relasi yang benar
+        $peminjaman = Peminjaman::with('detailPeminjaman.barang')->where('id', $id)->where('status', 'Menunggu Konfirmasi')->firstOrFail();
 
         DB::transaction(function () use ($peminjaman) {
             // 1. Kembalikan stok barang
-            foreach ($peminjaman->detailPeminjamans as $detail) {
-                $detail->barang->stok += $detail->jumlah;
-                $detail->barang->save();
+            foreach ($peminjaman->detailPeminjaman as $detail) {
+                $detail->barang->increment('stok', $detail->jumlah);
             }
             // 2. Hapus detail peminjaman terlebih dahulu
-            $peminjaman->detailPeminjamans()->delete();
+            $peminjaman->detailPeminjaman()->delete();
             // 3. Hapus peminjaman utama
             $peminjaman->delete();
         });
@@ -80,18 +82,21 @@ class KonfirmasiController extends Controller
      */
     public function terimaPengembalian($id)
     {
-        $peminjaman = Peminjaman::with('detailPeminjamans.barang')->where('id', $id)->where('status', 'Tunggu Konfirmasi Admin')->firstOrFail();
+        // Menggunakan nama relasi yang benar
+        $peminjaman = Peminjaman::with('detailPeminjaman.barang')->where('id', $id)->where('status', 'Tunggu Konfirmasi Admin')->firstOrFail();
 
         DB::transaction(function () use ($peminjaman) {
-            // 1. Kembalikan stok barang yang dikembalikan (tidak termasuk yang hilang)
-            foreach ($peminjaman->detailPeminjamans as $detail) {
-                // `jumlah` di sini adalah jumlah yang benar-benar dikembalikan
-                $detail->barang->stok += $detail->jumlah; 
-                $detail->barang->save();
+            // 1. Kembalikan stok barang yang dikembalikan
+            foreach ($peminjaman->detailPeminjaman as $detail) {
+                $jumlahDikembalikan = $detail->jumlah - ($detail->jumlah_hilang ?? 0);
+                if ($jumlahDikembalikan > 0) {
+                    $detail->barang->increment('stok', $jumlahDikembalikan);
+                }
             }
 
-            // 2. Ubah status peminjaman menjadi "Dikembalikan"
+            // 2. Ubah status peminjaman menjadi "Selesai"
             $peminjaman->status = 'Dikembalikan';
+            $peminjaman->tanggal_kembali = now();
             $peminjaman->save();
         });
 
@@ -104,24 +109,21 @@ class KonfirmasiController extends Controller
      */
     public function tolakPengembalian($id)
     {
-        // Ambil data peminjaman beserta detail dan history-nya
-        $peminjaman = Peminjaman::with('detailPeminjamans', 'history')
+        // Menggunakan nama relasi yang benar
+        $peminjaman = Peminjaman::with('detailPeminjaman', 'history')
             ->where('id', $id)
             ->where('status', 'Tunggu Konfirmasi Admin')
             ->firstOrFail();
 
-        // Gunakan transaksi database untuk memastikan semua operasi berhasil
         DB::transaction(function () use ($peminjaman) {
             
-            // 1. Kembalikan data di setiap detail peminjaman ke kondisi semula
-            foreach ($peminjaman->detailPeminjamans as $detail) {
-                // Kembalikan jumlah pinjaman ke nilai awal
-                // Nilai Awal = Jumlah yang Dikembalikan + Jumlah yang Hilang
-                $detail->jumlah += $detail->jumlah_hilang;
-
-                // Reset jumlah yang hilang menjadi 0
-                $detail->jumlah_hilang = 0;
-                $detail->save();
+            // 1. Kembalikan data di detail peminjaman ke kondisi semula
+            foreach ($peminjaman->detailPeminjaman as $detail) {
+                if (isset($detail->jumlah_hilang) && $detail->jumlah_hilang > 0) {
+                    $detail->jumlah += $detail->jumlah_hilang;
+                    $detail->jumlah_hilang = 0;
+                    $detail->save();
+                }
             }
 
             // 2. Hapus history pengembalian yang salah/dibatalkan
@@ -132,7 +134,7 @@ class KonfirmasiController extends Controller
             // 3. Ubah status peminjaman kembali ke "Dipinjam"
             $peminjaman->status = 'Dipinjam';
             
-            // 4. Kosongkan tanggal kembali karena pengembalian dibatalkan
+            // 4. Kosongkan tanggal kembali
             $peminjaman->tanggal_kembali = null;
             $peminjaman->save();
         });
@@ -140,3 +142,4 @@ class KonfirmasiController extends Controller
         return back()->with('success', 'Pengembalian ditolak. Status dan jumlah barang telah dikembalikan seperti semula.');
     }
 }
+

@@ -17,11 +17,15 @@ class Peminjaman extends Model
         'status',
     ];
 
-    public function detailPeminjamans()
+    public function detailPeminjaman()
     {
         return $this->hasMany(DetailPeminjaman::class);
     }
 
+        public function detailPeminjamans()
+    {
+        return $this->hasMany(DetailPeminjaman::class);
+    }
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -36,3 +40,4 @@ class Peminjaman extends Model
         return $this->hasOne(HistoryPeminjaman::class);
     }
 }
+

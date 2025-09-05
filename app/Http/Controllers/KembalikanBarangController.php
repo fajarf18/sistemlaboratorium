@@ -8,6 +8,8 @@ use App\Models\HistoryPeminjaman;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\ItemReturnNotification;
 use Carbon\Carbon;
 
 class KembalikanBarangController extends Controller
@@ -51,7 +53,7 @@ class KembalikanBarangController extends Controller
 
         $userId = Auth::id();
         $isTerlambat = false;
-        $peminjamanUntukHistory = null;
+        $peminjamanUntukNotifikasi = null; // Ganti nama variabel agar lebih jelas
         $peminjamanIdsToUpdate = [];
 
         DB::beginTransaction();
@@ -63,8 +65,9 @@ class KembalikanBarangController extends Controller
                         $q->where('user_id', $userId)->where('status', 'Dipinjam');
                     })->firstOrFail();
 
-                if (!$peminjamanUntukHistory) {
-                    $peminjamanUntukHistory = $detail->peminjaman;
+                // Ambil objek peminjaman untuk digunakan nanti (hanya sekali)
+                if (!$peminjamanUntukNotifikasi) {
+                    $peminjamanUntukNotifikasi = $detail->peminjaman;
                 }
                 
                 $peminjamanIdsToUpdate[] = $detail->peminjaman_id;
@@ -74,12 +77,7 @@ class KembalikanBarangController extends Controller
 
                 if ($jumlahDikembalikan < $jumlahDipinjam) {
                     $jumlahHilang = $jumlahDipinjam - $jumlahDikembalikan;
-
-                    // Kurangi jumlah pinjaman dengan jumlah yang hilang
                     $detail->jumlah = $jumlahDikembalikan;
-                    
-                    // Catat jumlah barang yang hilang
-                    // (Akumulasi jika ada proses pengembalian/kehilangan sebelumnya pada item yang sama)
                     $detail->jumlah_hilang = ($detail->jumlah_hilang ?? 0) + $jumlahHilang; 
                     $detail->save();
                 }
@@ -94,7 +92,7 @@ class KembalikanBarangController extends Controller
             }
 
             $tanggalKembaliCarbon = Carbon::parse($request->tanggal_kembali);
-            $tanggalWajibKembaliCarbon = Carbon::parse($peminjamanUntukHistory->tanggal_wajib_kembali);
+            $tanggalWajibKembaliCarbon = Carbon::parse($peminjamanUntukNotifikasi->tanggal_wajib_kembali);
 
             if ($tanggalKembaliCarbon->isAfter($tanggalWajibKembaliCarbon)) {
                 $isTerlambat = true;
@@ -105,7 +103,7 @@ class KembalikanBarangController extends Controller
             if ($isTerlambat) $statusPengembalian = $adaBarangHilang ? 'Hilang dan Terlambat' : 'Terlambat';
 
             $history = HistoryPeminjaman::create([
-                'peminjaman_id' => $peminjamanUntukHistory->id,
+                'peminjaman_id' => $peminjamanUntukNotifikasi->id,
                 'user_id' => $userId,
                 'tanggal_kembali' => $request->tanggal_kembali,
                 'status_pengembalian' => $statusPengembalian,
@@ -120,11 +118,53 @@ class KembalikanBarangController extends Controller
             }
 
             DB::commit();
+
+            // --- TAMBAHAN: Logika Pengiriman Email Ditempatkan di Sini ---
+            try {
+                // Muat ulang data peminjaman beserta relasinya untuk memastikan data terbaru
+                $peminjamanLengkap = Peminjaman::with('user', 'detailPeminjaman.barang')->find($peminjamanUntukNotifikasi->id);
+                if ($peminjamanLengkap) {
+                    Mail::to(config('app.admin_email'))->send(new ItemReturnNotification($peminjamanLengkap));
+                }
+            } catch (\Exception $e) {
+                \Log::error('Gagal mengirim email notifikasi pengembalian: '. $e->getMessage());
+            }
+            // --- AKHIR TAMBAHAN ---
+
             return redirect()->route('user.history.index')->with('pengembalian_sukses', true);
 
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Gagal mengembalikan barang: ' . $e->getMessage());
         }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | METHOD LAMA (DIARSIPKAN)
+    |--------------------------------------------------------------------------
+    |
+    | Method 'kembalikan($id)' ini adalah alur lama yang lebih sederhana.
+    | Alur utama sekarang ditangani oleh method 'konfirmasi()'.
+    | Method ini bisa dihapus jika sudah tidak ada tombol/link yang memanggilnya.
+    |
+    */
+    public function kembalikan($id)
+    {
+        $peminjaman = Peminjaman::with('user', 'detailPeminjaman.barang')->findOrFail($id);
+        if ($peminjaman->user_id !== auth()->id()) {
+            abort(403, 'Anda tidak diizinkan melakukan aksi ini.');
+        }
+        $peminjaman->status = 'Tunggu Konfirmasi Admin';
+        $peminjaman->save();
+        
+        try {
+            Mail::to(config('app.admin_email'))->send(new ItemReturnNotification($peminjaman));
+        } catch (\Exception $e) {
+            \Log::error('Gagal mengirim email notifikasi pengembalian dari method lama: '. $e->getMessage());
+        }
+        
+        // Pastikan nama rute ini benar, sepertinya yang benar adalah 'user.history.index'
+        return redirect()->route('history-peminjaman.index')->with('success', 'Pengajuan pengembalian barang berhasil, tunggu konfirmasi dari admin.');
     }
 }

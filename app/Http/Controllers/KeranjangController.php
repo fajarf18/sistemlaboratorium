@@ -9,6 +9,8 @@ use App\Models\DetailPeminjaman;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\NewOrderNotification;
 
 class KeranjangController extends Controller
 {
@@ -120,6 +122,8 @@ class KeranjangController extends Controller
                 'user_id' => Auth::id(),
                 'tanggal_pinjam' => now(),
                 'tanggal_wajib_kembali' => now()->addDays(3),
+                // --- PERUBAHAN DI SINI ---
+                // Menggunakan nilai status yang sesuai dengan ENUM baru Anda
                 'status' => 'Menunggu Konfirmasi',
             ]);
 
@@ -131,15 +135,25 @@ class KeranjangController extends Controller
                 ]);
 
                 // Mengurangi stok barang
-                $item->barang->stok -= $item->jumlah;
-                $item->barang->save();
+                $item->barang->decrement('stok', $item->jumlah);
 
                 // Hapus item dari keranjang
                 $item->delete();
             }
 
             DB::commit();
-            return redirect()->route('user.keranjang.index')->with('checkout_success', true);
+
+            // Kirim notifikasi email setelah transaksi database berhasil
+            try {
+                $peminjamanLengkap = Peminjaman::with('user', 'detailPeminjaman.barang')->find($peminjaman->id);
+                if ($peminjamanLengkap) {
+                    Mail::to(config('app.admin_email'))->send(new NewOrderNotification($peminjamanLengkap));
+                }
+            } catch (\Exception $e) {
+                \Log::error('Gagal mengirim email notifikasi checkout: '. $e->getMessage());
+            }
+            
+            return redirect()->route('user.keranjang.index')->with('success', 'Barang berhasil dipinjam, tunggu konfirmasi dari admin.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -147,3 +161,4 @@ class KeranjangController extends Controller
         }
     }
 }
+

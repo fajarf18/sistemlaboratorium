@@ -25,7 +25,10 @@ protected $fillable = [
     'prodi',
     'semester',
     'password',
-    'role', // Tambahkan role
+    'role',
+    'otp', // <-- TAMBAHKAN INI
+    'otp_expires_at', // Tambahkan role
+    'email_verified_at',
 ];
 
     /**

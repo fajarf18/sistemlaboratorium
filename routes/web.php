@@ -13,8 +13,25 @@ use App\Http\Controllers\Admin\BarangController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\KonfirmasiController;
 use App\Http\Controllers\Admin\HistoryController;
+use App\Http\Controllers\Auth\OtpController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
 
-// Rute untuk tamu (landing page)
+Route::middleware('guest')->group(function () {
+    // Rute untuk Lupa Password
+    Route::get('forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
+    Route::post('forgot-password', [ForgotPasswordController::class, 'sendOtp'])->name('password.email.send');
+    
+    Route::get('verify-password-otp', [ForgotPasswordController::class, 'showOtpForm'])->name('password.otp.form');
+    Route::post('verify-password-otp', [ForgotPasswordController::class, 'verifyOtp'])->name('password.otp.verify');
+    
+    Route::get('reset-password', [ForgotPasswordController::class, 'showResetForm'])->name('password.reset.form');
+    Route::post('reset-password', [ForgotPasswordController::class, 'resetPassword'])->name('password.update.new');
+
+    Route::get('verify-otp', [OtpController::class, 'showOtpForm'])->name('otp.form');
+    Route::post('verify-otp', [OtpController::class, 'verifyOtp'])->name('otp.verify');
+    Route::post('resend-otp', [OtpController::class, 'resendOtp'])->name('otp.resend'); 
+    // Rute untuk tamu (landing page)
+});
 Route::get('/', function () {
     return redirect()->route('login');
 });
@@ -50,12 +67,12 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::resource('users', UserController::class)->only(['index']);
     Route::resource('users', UserController::class)->only(['index', 'update']);
     Route::resource('users', UserController::class)->only(['index', 'update', 'destroy']);
-    Route::get('/konfirmasi', [KonfirmasiController::class, 'index'])->name('konfirmasi.index');
+Route::get('/konfirmasi', [KonfirmasiController::class, 'index'])->name('konfirmasi.index');
     Route::get('/konfirmasi/{id}', [KonfirmasiController::class, 'show'])->name('konfirmasi.show');
-    Route::post('/konfirmasi/peminjaman/{id}/terima', [KonfirmasiController::class, 'terimaPeminjaman'])->name('konfirmasi.peminjaman.terima');
-    Route::post('/konfirmasi/peminjaman/{id}/tolak', [KonfirmasiController::class, 'tolakPeminjaman'])->name('konfirmasi.peminjaman.tolak');
-    Route::post('/konfirmasi/pengembalian/{id}/terima', [KonfirmasiController::class, 'terimaPengembalian'])->name('konfirmasi.pengembalian.terima');
-    Route::post('/konfirmasi/pengembalian/{id}/tolak', [KonfirmasiController::class, 'tolakPengembalian'])->name('konfirmasi.pengembalian.tolak');
+    Route::post('/konfirmasi/terima-peminjaman/{id}', [KonfirmasiController::class, 'terimaPeminjaman'])->name('konfirmasi.terimaPeminjaman');
+    Route::post('/konfirmasi/tolak-peminjaman/{id}', [KonfirmasiController::class, 'tolakPeminjaman'])->name('konfirmasi.tolakPeminjaman');
+    Route::post('/konfirmasi/terima-pengembalian/{id}', [KonfirmasiController::class, 'terimaPengembalian'])->name('konfirmasi.terimaPengembalian');
+    Route::post('/konfirmasi/tolak-pengembalian/{id}', [KonfirmasiController::class, 'tolakPengembalian'])->name('konfirmasi.tolakPengembalian');
     Route::get('history/download', [HistoryController::class, 'download'])->name('history.download');
     Route::resource('history', HistoryController::class)->only(['index', 'show', 'destroy']);
 });
@@ -88,7 +105,8 @@ Route::middleware('auth')->prefix('user')->name('user.')->group(function () {
     Route::post('/kembalikan-barang/konfirmasi', [KembalikanBarangController::class, 'konfirmasi'])->name('kembalikan.konfirmasi');
         Route::get('/history-peminjaman', [HistoryPeminjamanController::class, 'index'])->name('history.index');
         Route::get('/history-peminjaman/detail/{id}', [HistoryPeminjamanController::class, 'show'])->name('history.show');
-    
+    Route::get('verify-otp', [OtpController::class, 'showOtpForm'])->name('otp.form');
+Route::post('verify-otp', [OtpController::class, 'verifyOtp'])->name('otp.verify');
     // ... rute user lainnya ...
 });
 
