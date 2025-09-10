@@ -1,0 +1,6 @@
+/vendor
+/node_modules
+.env
+/storage/framework/sessions/*
+/storage/framework/cache/data/*
+/storage/logs/*.log
