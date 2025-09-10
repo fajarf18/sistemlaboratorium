@@ -1,9 +1,12 @@
 {
     "version": 2,
     "framework": null,
-    "functions": {
-        "api/index.php": { "runtime": "vercel-php@0.5.3" }
-    },
+    "builds": [
+        {
+            "src": "public/index.php",
+            "use": "@vercel/community-php@latest"
+        }    
+    ],
     "routes": [
         { "src": "/build/(.*)", "dest": "/public/build/" },
         { "src": "/(.*)", "dest": "/api/index.php" }
