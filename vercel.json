@@ -1,24 +1,47 @@
 {
     "version": 2,
     "framework": null,
-    "builds": [
-        {
-            "src": "public/index.php",
-            "use": "@vercel/php"
-        }
-    ],
+    "functions": {
+        "api/index.php": { "runtime": "vercel-php@0.6.0" }
+    },
     "routes": [
-        {
-            "src": "/(css|js|images|storage|favicon.ico)(.*)",
-            "dest": "/public/$1$2"
-        },
-        {
-            "handle": "filesystem"
-        },
-        {
-            "src": "/.*",
-            "dest": "/public/index.php"
-        }
+        { "src": "/build/(.*)", "dest": "/public/build/" },
+        { "src": "/(.*)", "dest": "/api/index.php" }
     ],
-    "outputDirectory": "public"
+    "public": true,
+    "buildCommand": "bash build.sh",
+    "outputDirectory": "public",
+    "env": {
+        "APP_ENV": "production",
+        "APP_DEBUG": "false",
+        "APP_URL": "https://sistemlaboratorium.vercel.app",
+        "APP_KEY": "base64:M2EBrvXIxk3k+tm/FfGDkqFI3N8nJBHYy1BrYlnwGGw=",
+        "APP_CONFIG_CACHE": "/tmp/config.php",
+        "APP_EVENTS_CACHE": "/tmp/events.php",
+        "APP_PACKAGES_CACHE": "/tmp/packages.php",
+        "APP_ROUTES_CACHE": "/tmp/routes.php",
+        "APP_SERVICES_CACHE": "/tmp/services.php",
+        "VIEW_COMPILED_PATH": "/tmp",
+        "CACHE_DRIVER": "array",
+        "LOG_CHANNEL": "stderr",
+        "SESSION_DRIVER": "cookie",
+        "DB_CONNECTION": "mysql",
+        "DB_HOST": "mysql-a6ee741-sistemlab.d.aivencloud.com",
+        "DB_PORT": "27990",
+        "DB_DATABASE": "defaultdb",
+        "DB_USERNAME": "avnadmin",
+        "DB_PASSWORD": "AVNS_p8u4eL1NL05Ve2d947g",
+        "MYSQL_ATTR_SSL_CA": "-----BEGIN CERTIFICATE----- MIIEUDCCArigAwIBAgIUL2tK0GflTBhCnA8cZMeyu8RCbMowDQYJKoZIhvcNAQEM BQAwQDE+MDwGA1UEAww1NjRiN2RjYmEtNDI3Mi00MWRiLTk1OGMtZTVkMDFmOWI0 Zjk1IEdFTiAxIFByb2plY3QgQ0EwHhcNMjUwOTEwMDYxMTA0WhcNMzUwOTA4MDYx MTA0WjBAMT4wPAYDVQQDDDU2NGI3ZGNiYS00MjcyLTQxZGItOTU4Yy1lNWQwMWY5 YjRmOTUgR0VOIDEgUHJvamVjdCBDQTCCAaIwDQYJKoZIhvcNAQEBBQADggGPADCC AYoCggGBANuYIoea/arUOcnFRV1x6STF1IgQCXgmbt4fW1cdE8rV7NKhzWfVRSOb HltfYM6yotKO57VEylEvmQJeuxFGhnkWhE2Gvj8awIjUVuyM1ofrfSBwtOL+crBx kDIIPrluKjL6bzHfE2aMcNJbheq0jrcDlvVSOPn7fjIzDVO3U6tm5VkQNF8JOS0N Gxw994U7gwYX8Y8dmyQ2C9yZS9hyq01cLb19H55wtWyK/S6nxmCQcKN0tPANQMI/ gnTAq68AaAuizGMo5iYOHaChUlho3i9+lGGlqx16K9CEoWEBq1nQ1GLrBIqCM7xQ wRgQNMXBj35lqwKGPG/QOabVZ2D0OChYidaVXLLoHw045TsdbEkpwASE9ufskiJ6 yyplZLhDgvrVFAVHsVqTwa+E99pSXEhWIbVRpZdddeNaRbLGYNC5cYo06zhD37Qm XOQRK7VhDVoiZw7uTcZec+A+7pp46WrIpkw+VBlpGB2GZF/pIugGewCptv11/7bI Fq9xngTPNQIDAQABo0IwQDAdBgNVHQ4EFgQU4Qs0EdE1VqVn0ycMNeMzyBQ1d3Uw EgYDVR0TAQH/BAgwBgEB/wIBADALBgNVHQ8EBAMCAQYwDQYJKoZIhvcNAQEMBQAD ggGBAAws79652Za1MG4+mxd5abFYrHU1728ATkJUVWYaC2RBLboDK78S5ffkIPrR nLdvjCW4/k6BIOtjBVKRutC5/cdvCuKhypchWndoy+U1orBxejG/71oBpVrz7CeN 9+JOvXngkZIm/kMuhhRpujx2IQ6lYtBRDp/48WpN7t72apj3EHyiwjzQ9pvd3ZBe dLv8tZKyEjxo8WjZvd0sJeALrvz2QxCq5gTzr5tMwJS2An1Na02Jb/EZrjvYo7aW gplJ5dDAO0nOj1UByyd/SmS0Va5fIRRd1MHOMs2kwD9GqRjwxEtiLd49WVi1D0EM 6jccnHPTz/qMEE/kR7UCzfREj2PYxlg3YwpYuKbz1QWSPuQF6UZJ/Liu0WvmLunr DDABlgJP9Gya+e3aOnHYNKDh0BwH8DI/RSMb8kPsSe+jfLro/uLZ0YfeQ5xKiAMq b2vokPJXb/iFKvtL1W+B9gQKWgK3jjfNcyCB0aHfcccMEgAvbYYiC1HByRgWr+fh wLBJiA== -----END CERTIFICATE-----",
+        "DB_SSL_MODE": "require",
+        "MAIL_MAILER":"smtp",
+"MAIL_HOST":"smtp.gmail.com",
+"MAIL_PORT":"587",
+"MAIL_USERNAME":"traktorterbang004@gmail.com",
+"MAIL_PASSWORD":"omfpbkhtdqwowvbd",
+"MAIL_ENCRYPTION":"tls",
+"MAIL_FROM_ADDRESS":"traktorterbang004@gmail.com",
+"MAIL_FROM_NAME":"SistemLaboratorium",
+"ADMIN_MAIL_ADDRESS":"traktorterbang001@gmail.com"
+        
+    }
 }
