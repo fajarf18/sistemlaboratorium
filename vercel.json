@@ -30,7 +30,6 @@
         "DB_PORT": "27990",
         "DB_DATABASE": "defaultdb",
         "DB_USERNAME": "avnadmin",
-        "DB_PASSWORD": "AVNS_p8u4eL1NL05Ve2d947g",
         "DB_SSL_MODE": "require",
         "MAIL_MAILER":"smtp",
 "MAIL_HOST":"smtp.gmail.com",
