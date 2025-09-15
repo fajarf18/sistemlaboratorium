@@ -1,33 +1,38 @@
 #!/bin/bash
 
-echo "✅ Build script started"
+# Exit immediately if a command exits with a non-zero status.
+set -e
+
+# HAPUS CACHE LAMA (PENTING!)
+# Pastikan direktori ada sebelum mencoba menghapus file
+if [ -f "bootstrap/cache/config.php" ]; then
+    php artisan config:clear
+fi
+if [ -f "bootstrap/cache/routes.php" ]; then
+    php artisan route:clear
+fi
+if [ -d "storage/framework/views" ]; then
+    php artisan view:clear
+fi
+if [ -f "bootstrap/cache/events.php" ]; then
+    php artisan event:clear
+fi
 
 # 1. Install Composer dependencies
-echo "➡️ Installing Composer dependencies..."
-composer install --optimize-autoloader --no-interaction --no-progress --no-dev
+composer install --optimize-autoloader --no-dev
 
-# 2. Generate Laravel's optimized files
-echo "➡️ Caching Laravel configurations..."
+# 2. Link storage directory
+php artisan storage:link
+
+# 3. BUAT CACHE BARU
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan event:cache
 
-# 3. Build front-end assets
-echo "➡️ Building front-end assets..."
+# 4. Install NPM dependencies and build assets
 npm install
 npm run build
 
-# 4. PENTING: Pindahkan direktori storage ke /tmp
-# Vercel hanya mengizinkan penulisan ke direktori /tmp
-echo "➡️ Moving storage directories to /tmp..."
-mv storage/framework /tmp/framework
-mv storage/logs /tmp/logs
-
-# 5. Buat symlink untuk storage link
-# Ini adalah pengganti `php artisan storage:link`
-echo "➡️ Creating storage symlink..."
-rm -rf public/storage
-ln -s `realpath storage/app/public` public/storage
-
-echo "✅ Build script finished successfully"
+# 5. Run database migrations
+php artisan migrate --force
