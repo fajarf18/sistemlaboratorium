@@ -13,7 +13,7 @@ class UserDashboardController extends Controller
         // Ambil semua peminjaman yang masih aktif
         $activePeminjamans = Peminjaman::with('detailPeminjamans.barang')
             ->where('user_id', Auth::id())
-            ->whereIn('status', ['Dipinjam', 'Menunggu Konfirmasi'])
+            ->whereIn('status', ['Dipinjam', 'Menunggu Konfirmasi','Tunggu Konfirmasi Admin'])
             ->get();
 
         // Cek apakah ada yang statusnya 'Menunggu Konfirmasi'

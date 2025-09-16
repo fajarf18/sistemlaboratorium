@@ -29,6 +29,9 @@ class KonfirmasiController extends Controller
   /**
      * Menampilkan detail peminjaman untuk modal.
      */
+    /**
+     * Menampilkan detail peminjaman untuk modal.
+     */
     public function show($id)
     {
         $peminjaman = Peminjaman::with([
@@ -37,47 +40,56 @@ class KonfirmasiController extends Controller
             'history'
         ])->findOrFail($id);
 
-        // Hanya jalankan logika ini jika ini adalah proses konfirmasi pengembalian
         if ($peminjaman->status === 'Tunggu Konfirmasi Admin') {
             
-            // ================= LOGIKA BARU SESUAI PERMINTAAN =================
+            // ================= LOGIKA BARU UNTUK PEMISAHAN TIPE =================
             
-            // Langkah 1: Inisialisasi variabel
             $statusParts = [];
             $daysLate = 0;
-            $totalLost = $peminjaman->detailPeminjaman->sum(fn($detail) => (int) $detail->jumlah_hilang);
+            $totalHilang = 0; // Untuk barang 'Tidak Habis Pakai' yang kurang
+            $totalHabis = 0;  // Untuk barang 'Habis Pakai' yang kurang
 
-            // Langkah 2: Evaluasi kondisi "Hilang"
-            if ($totalLost > 0) {
-                $statusParts[] = 'Hilang';
+            // Langkah 1: Iterasi dan hitung total untuk setiap jenis barang
+             foreach ($peminjaman->detailPeminjaman as $detail) {
+                $jumlahKurang = (int) $detail->jumlah_hilang;
+                if ($jumlahKurang > 0) {
+                    
+                    // ================= PERBAIKAN DI SINI =================
+                    // Mengubah 'jenis' menjadi 'tipe' agar cocok dengan database Anda
+                    if (strtolower($detail->barang->tipe) === 'habis pakai') {
+                    // =======================================================
+                        $totalHabis += $jumlahKurang;
+                    } else {
+                        $totalHilang += $jumlahKurang;
+                    }
+                }
             }
+            
+            // Langkah 2: Tentukan status berdasarkan hasil perhitungan
+            if ($totalHilang > 0) $statusParts[] = 'Hilang';
+            if ($totalHabis > 0) $statusParts[] = 'Habis';
 
             // Langkah 3: Evaluasi kondisi "Terlambat"
-            // Pastikan ada tanggal kembali yang diinput oleh user untuk dibandingkan
             if ($peminjaman->tanggal_kembali) {
-                // Tentukan tanggal wajib kembali (3 hari setelah pinjam)
                 $tanggalPinjam = Carbon::parse($peminjaman->tanggal_pinjam)->startOfDay();
                 $tanggalWajibKembali = $tanggalPinjam->copy()->addDays(3);
-                
-                // Ambil tanggal pengembalian AKTUAL dari input user di tabel peminjaman
                 $tanggalPengembalianUser = Carbon::parse($peminjaman->tanggal_kembali)->startOfDay();
 
-                // Bandingkan tanggal pengembalian user dengan tanggal wajib kembali
                 if ($tanggalPengembalianUser->isAfter($tanggalWajibKembali)) {
                     $statusParts[] = 'Terlambat';
-                    // Hitung selisih hari keterlambatan
                     $daysLate = $tanggalWajibKembali->diffInDays($tanggalPengembalianUser);
                 }
             }
 
-            // Langkah 4: Gabungkan hasil evaluasi untuk status final
+            // Langkah 4: Gabungkan status final
             $status = !empty($statusParts) ? implode(' dan ', $statusParts) : 'Aman';
-            // ====================================================================
+            // =======================================================================
 
             // Tambahkan data hasil perhitungan ke respons JSON
             $peminjaman->status_pengembalian = $status;
             $peminjaman->hari_terlambat = $daysLate;
-            $peminjaman->total_hilang = $totalLost;
+            $peminjaman->total_hilang = $totalHilang; // Sekarang ini HANYA untuk barang hilang
+            $peminjaman->total_habis = $totalHabis;   // Properti baru untuk barang habis
         }
 
         return response()->json($peminjaman);

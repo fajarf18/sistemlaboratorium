@@ -16,7 +16,7 @@ class PinjamBarangController extends Controller
             ->whereIn('status', [
                 'Dipinjam', 
                 'Menunggu Konfirmasi', 
-                'Tunggu Konfirmasi Pengembalian' // <-- TAMBAHKAN STATUS INI
+                'Tunggu Konfirmasi Admin' // <-- TAMBAHKAN STATUS INI
             ])
             ->exists();
 
