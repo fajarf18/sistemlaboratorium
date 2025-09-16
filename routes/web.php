@@ -75,6 +75,7 @@ Route::get('/konfirmasi', [KonfirmasiController::class, 'index'])->name('konfirm
     Route::post('/konfirmasi/tolak-pengembalian/{id}', [KonfirmasiController::class, 'tolakPengembalian'])->name('konfirmasi.tolakPengembalian');
     Route::get('history/download', [HistoryController::class, 'download'])->name('history.download');
     Route::resource('history', HistoryController::class)->only(['index', 'show', 'destroy']);
+    
 });
 
 

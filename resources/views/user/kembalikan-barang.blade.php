@@ -64,9 +64,9 @@
     <!-- Modal Konfirmasi -->
     <div x-show="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" style="display: none;">
         <div @click.outside="showModal = false" class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <form action="{{ route('user.kembalikan.konfirmasi') }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                <input type="hidden" name="items" :value="JSON.stringify(items)">
+            <form action="{{ route('user.kembalikan.konfirmasi') }}" method="POST" enctype="multipart/form-data" @submit="isProcessing = true">
+            @csrf
+            <input type="hidden" name="items" :value="JSON.stringify(items)">
 
                 {{-- Menampilkan Error Validasi di Dalam Modal --}}
                 @if ($errors->any())
@@ -132,7 +132,13 @@
 
                 <div class="mt-6 flex justify-end gap-3">
                     <button type="button" @click="showModal = false" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Kembali</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Konfirmasi</button>
+                    <button type="submit" 
+                        :disabled="isProcessing"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg"
+                        :class="{'bg-gray-400 cursor-not-allowed': isProcessing, 'hover:bg-blue-700': !isProcessing}">
+                    <span x-show="!isProcessing">Konfirmasi</span>
+                    <span x-show="isProcessing">Memproses...</span>
+                </button>
                 </div>
             </form>
         </div>
@@ -149,7 +155,7 @@
             tanggalWajibKembali: items.length > 0 ? items[0].peminjaman.tanggal_wajib_kembali : '',
             tanggalKembali: new Date().toLocaleDateString('en-CA'),
             hariTerlambat: 0,
-            
+            isProcessing: false,
             get tanggalPinjamFormatted() {
                 return this.tanggalPinjam ? new Date(this.tanggalPinjam).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
             },

@@ -1,93 +1,75 @@
 <x-admin-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Konfirmasi Peminjaman dan Pengembalian') }}
-        </h2>
-    </x-slot>
-    <div class="py-12 w-full">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8" x-data="konfirmasiData()">
-            @if (session('success'))
-                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-6" role="alert">
-                    <span class="block sm:inline">{{ session('success') }}</span>
-                </div>
-            @endif
-            @if (session('error'))
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
-                    <span class="block sm:inline">{{ session('error') }}</span>
-                </div>
-            @endif
+    {{-- 
+        Bungkus utama Alpine.js. 
+        x-data="konfirmasiData()" sekarang mencakup semua elemen di dalamnya,
+        termasuk tombol, notifikasi, dan modal.
+    --}}
+    <div x-data="konfirmasiData()">
+        <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+                <h1 class="text-2xl md:text-3xl text-gray-800 font-bold">Konfirmasi</h1>
+            </div>
 
-            <div class="space-y-8">
-                <div class="bg-white p-6 rounded-xl shadow-lg">
-                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Konfirmasi Peminjaman</h3>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm text-left">
-                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3">Nama Peminjam</th>
-                                    <th class="px-6 py-3">NIM</th>
-                                    <th class="px-6 py-3">Tanggal Checkout</th>
-                                    <th class="px-6 py-3 text-center">Status</th>
-                                    <th class="px-6 py-3 text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($peminjamanMenunggu as $peminjaman)
-                                <tr class="bg-white border-b hover:bg-gray-50">
-                                    <td class="px-6 py-4 align-middle">{{ $peminjaman->user->nama }}</td>
-                                    <td class="px-6 py-4 align-middle">{{ $peminjaman->user->nim }}</td>
-                                    <td class="px-6 py-4 align-middle">{{ $peminjaman->created_at->format('d F Y') }}</td>
-                                    <td class="px-6 py-4 text-center align-middle">
-                                        <span class="inline-block px-3 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
-                                            {{ $peminjaman->status }}
-                                        </span>
-                                    </td>
-                                    <td class="px-6 py-4 text-center align-middle">
-                                        <button @click="fetchDetail({{ $peminjaman->id }}, 'peminjaman')" class="text-blue-600 hover:text-blue-800">
-                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                                        </button>
-                                    </td>
-                                </tr>
-                                @empty
-                                <tr><td colspan="5" class="text-center py-4">Tidak ada permintaan peminjaman baru.</td></tr>
-                                @endforelse
-                            </tbody>
-                        </table>
+            @if (session('success'))
+                <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="mb-4 p-4 text-sm text-green-800 rounded-lg bg-green-100 border border-green-300" role="alert">
+                    <div class="flex items-center">
+                        <svg class="flex-shrink-0 inline w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        <span class="font-medium">Sukses!</span>
+                        <span class="ml-1">{{ session('success') }}</span>
+                        <button type="button" @click="show = false" class="ml-auto -mx-1.5 -my-1.5 bg-green-100 text-green-500 rounded-lg focus:ring-2 focus:ring-green-400 p-1.5 hover:bg-green-200 inline-flex h-8 w-8">
+                            <span class="sr-only">Dismiss</span>
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                        </button>
                     </div>
                 </div>
+            @endif
 
-                <div class="bg-white p-6 rounded-xl shadow-lg">
-                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Konfirmasi Pengembalian</h3>
-                     <div class="overflow-x-auto">
-                        <table class="w-full text-sm text-left">
-                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+            @if (session('danger'))
+                <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="mb-4 p-4 text-sm text-red-800 rounded-lg bg-red-100 border border-red-300" role="alert">
+                    <div class="flex items-center">
+                        <svg class="flex-shrink-0 inline w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>
+                        <span class="font-medium">Info:</span>
+                        <span class="ml-1">{{ session('danger') }}</span>
+                        <button type="button" @click="show = false" class="ml-auto -mx-1.5 -my-1.5 bg-red-100 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex h-8 w-8">
+                            <span class="sr-only">Dismiss</span>
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            @endif
+            {{-- Menunggu Konfirmasi Peminjaman --}}
+            <div class="bg-white shadow-lg rounded-sm border border-gray-200 mb-8" x-data="{ open: true }">
+                <header class="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
+                    <h2 class="font-semibold text-gray-800">Menunggu Konfirmasi Peminjaman</h2>
+                    <button @click="open = !open">
+                        <svg class="w-6 h-6" :class="{ 'transform rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                </header>
+                <div class="p-3" x-show="open" x-transition>
+                    <div class="overflow-x-auto">
+                        <table class="table-auto w-full">
+                            <thead class="text-xs font-semibold uppercase text-gray-400 bg-gray-50">
                                 <tr>
-                                    <th class="px-6 py-3">Nama Peminjam</th>
-                                    <th class="px-6 py-3">NIM</th>
-                                    <th class="px-6 py-3">Tanggal Pengembalian</th>
-                                    <th class="px-6 py-3 text-center">Status</th>
-                                    <th class="px-6 py-3 text-center">Aksi</th>
+                                    <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Nama Peminjam</div></th>
+                                    <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Tanggal Pinjam</div></th>
+                                    <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Tanggal Kembali</div></th>
+                                    <th class="p-2 whitespace-nowrap"><div class="font-semibold text-center">Aksi</div></th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @forelse ($pengembalianMenunggu as $peminjaman)
-                                <tr class="bg-white border-b hover:bg-gray-50">
-                                    <td class="px-6 py-4 align-middle">{{ $peminjaman->user->nama }}</td>
-                                    <td class="px-6 py-4 align-middle">{{ $peminjaman->user->nim }}</td>
-                                    <td class="px-6 py-4 align-middle">{{ $peminjaman->updated_at->format('d F Y') }}</td>
-                                    <td class="px-6 py-4 text-center align-middle">
-                                        <span class="inline-block px-3 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
-                                            {{ $peminjaman->status }}
-                                        </span>
-                                    </td>
-                                    <td class="px-6 py-4 text-center align-middle">
-                                        <button @click="fetchDetail({{ $peminjaman->id }}, 'pengembalian')" class="text-blue-600 hover:text-blue-800">
-                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                                        </button>
-                                    </td>
-                                </tr>
+                            <tbody class="text-sm divide-y divide-gray-100">
+                                @forelse ($peminjamanMenunggu as $item)
+                                    <tr>
+                                        <td class="p-2 whitespace-nowrap">{{ $item->user->name }}</td>
+                                        <td class="p-2 whitespace-nowrap">{{ \Carbon\Carbon::parse($item->tanggal_pinjam)->isoFormat('D MMMM YYYY') }}</td>
+                                        <td class="p-2 whitespace-nowrap">{{ \Carbon\Carbon::parse($item->tanggal_kembali)->isoFormat('D MMMM YYYY') }}</td>
+                                        <td class="p-2 whitespace-nowrap text-center">
+                                            <button @click="openModal('peminjaman', {{ $item->id }})" class="px-3 py-1 text-sm font-medium text-white bg-blue-500 rounded-md hover:bg-blue-600">
+                                                Detail
+                                            </button>
+                                        </td>
+                                    </tr>
                                 @empty
-                                <tr><td colspan="5" class="text-center py-4">Tidak ada permintaan pengembalian baru.</td></tr>
+                                    <tr><td colspan="4" class="p-4 text-center text-gray-500">Tidak ada permintaan peminjaman.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
@@ -95,94 +77,131 @@
                 </div>
             </div>
 
-            {{-- Modal Detail --}}
-            <div x-show="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" style="display: none;">
-                <div @click.outside="showModal = false" class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-                    <div class="flex justify-between items-center mb-4 border-b pb-3">
-                        <h3 class="text-xl font-bold text-gray-800" x-text="modalTitle"></h3>
-                        <button @click="showModal = false" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+            {{-- Menunggu Konfirmasi Pengembalian --}}
+            <div class="bg-white shadow-lg rounded-sm border border-gray-200" x-data="{ open: true }">
+                <header class="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
+                    <h2 class="font-semibold text-gray-800">Menunggu Konfirmasi Pengembalian</h2>
+                    <button @click="open = !open">
+                        <svg class="w-6 h-6" :class="{ 'transform rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                </header>
+                <div class="p-3" x-show="open" x-transition>
+                    <div class="overflow-x-auto">
+                        <table class="table-auto w-full">
+                             <thead class="text-xs font-semibold uppercase text-gray-400 bg-gray-50">
+                                <tr>
+                                    <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Nama Peminjam</div></th>
+                                    <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Tanggal Pinjam</div></th>
+                                    <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Tanggal Wajib Kembali</div></th>
+                                    <th class="p-2 whitespace-nowrap"><div class="font-semibold text-center">Aksi</div></th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm divide-y divide-gray-100">
+                                @forelse ($pengembalianMenunggu as $item)
+                                    <tr>
+                                        <td class="p-2 whitespace-nowrap">{{ $item->user->name }}</td>
+                                        <td class="p-2 whitespace-nowrap">{{ \Carbon\Carbon::parse($item->tanggal_pinjam)->isoFormat('D MMMM YYYY') }}</td>
+                                        <td class="p-2 whitespace-nowrap">{{ \Carbon\Carbon::parse($item->tanggal_kembali)->isoFormat('D MMMM YYYY') }}</td>
+                                        <td class="p-2 whitespace-nowrap text-center">
+                                            <button @click="openModal('pengembalian', {{ $item->id }})" class="px-3 py-1 text-sm font-medium text-white bg-blue-500 rounded-md hover:bg-blue-600">
+                                                Detail
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @empty
+                                     <tr><td colspan="4" class="p-4 text-center text-gray-500">Tidak ada permintaan pengembalian.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
-                    
-                    <div x-show="loading" class="text-center py-10">Memuat data...</div>
+                </div>
+            </div>
+        </div>
 
-                    <div x-show="!loading && detail" class="space-y-4">
-                        {{-- Notifikasi Status Pengembalian dari History --}}
-                        <template x-if="detail.history && modalType === 'pengembalian'">
-                            <div class="p-4 rounded-lg" :class="{
-                                'bg-green-100 border-l-4 border-green-500 text-green-700': detail.history.status_pengembalian == 'Aman',
-                                'bg-red-100 border-l-4 border-red-500 text-red-700': detail.history.status_pengembalian.includes('Hilang'),
-                                'bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700': detail.history.status_pengembalian.includes('Terlambat')
-                            }">
-                                <p class="font-bold">Status Pengembalian: <span x-text="detail.history.status_pengembalian"></span></p>
-                            </div>
-                        </template>
+        {{-- Modal Detail --}}
+        <div x-show="isModalOpen" @keydown.escape.window="isModalOpen = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" style="display: none;">
+            <div class="flex items-end justify-center min-h-screen px-4 text-center md:items-center sm:block sm:p-0">
+                <div x-cloak @click="isModalOpen = false" x-show="isModalOpen" x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200 transform" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-40" aria-hidden="true"></div>
 
-                        {{-- Tabel Rincian Barang Dipinjam --}}
-                        <div>
-                            <h4 class="font-semibold text-md mb-2">Rincian Barang</h4>
-                            <div class="border rounded-lg overflow-hidden">
-                                <table class="w-full text-sm">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th class="px-4 py-2 text-left font-semibold text-gray-600">Nama Barang</th>
-                                            <th class="px-4 py-2 text-center font-semibold text-gray-600">Jumlah</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {{-- Menggunakan nama relasi yang benar: detail_peminjaman --}}
-                                        <template x-for="item in detail.detail_peminjaman" :key="item.id">
-                                            <tr class="border-t">
-                                                <td class="px-4 py-2 text-gray-800" x-text="item.barang.nama_barang"></td>
-                                                <td class="px-4 py-2 text-center text-gray-600" x-text="(item.jumlah + (item.jumlah_hilang || 0)) + ' pcs'"></td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
-                            </div>
+                <div x-cloak x-show="isModalOpen" x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="transition ease-in duration-200 transform" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block w-full max-w-xl p-8 my-20 overflow-hidden text-left transition-all transform bg-white rounded-lg shadow-xl 2xl:max-w-2xl">
+                    <div class="flex items-center justify-between space-x-4">
+                        <h1 class="text-xl font-medium text-gray-800" id="modal-title" x-text="'Detail ' + (modalType.charAt(0).toUpperCase() + modalType.slice(1))"></h1>
+                        <button @click="isModalOpen = false" class="text-gray-600 focus:outline-none hover:text-gray-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </button>
+                    </div>
+
+                    <div class="mt-6">
+                        <div x-show="loading" class="flex justify-center items-center py-10">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                         </div>
 
-                        {{-- Menampilkan Barang yang Hilang (jika ada) --}}
-                        <template x-if="modalType === 'pengembalian' && detail.detail_peminjaman.some(item => item.jumlah_hilang > 0)">
-                             <div>
-                                <h4 class="font-semibold text-md mb-2 text-red-600">Barang Hilang</h4>
-                                <div class="border border-red-200 rounded-lg overflow-hidden">
-                                    <table class="w-full text-sm">
-                                        <thead class="bg-red-50">
-                                            <tr>
-                                                <th class="px-4 py-2 text-left font-semibold text-red-700">Nama Barang</th>
-                                                <th class="px-4 py-2 text-center font-semibold text-red-700">Jumlah Hilang</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <template x-for="item in detail.detail_peminjaman.filter(i => i.jumlah_hilang > 0)" :key="item.id">
-                                                <tr class="border-t border-red-200">
-                                                    <td class="px-4 py-2 text-red-800" x-text="item.barang.nama_barang"></td>
-                                                    <td class="px-4 py-2 text-center text-red-800" x-text="item.jumlah_hilang + ' pcs'"></td>
-                                                </tr>
-                                            </template>
-                                        </tbody>
-                                    </table>
-                                </div>
-                               </div>
-                        </template>
-                        
-                        {{-- Deskripsi Kehilangan (jika ada) --}}
-                        <template x-if="detail.history && detail.history.deskripsi_kehilangan">
-                            <div>
-                                <h4 class="font-semibold text-md mb-1">Alasan Kehilangan:</h4>
-                                <p class="text-sm p-3 bg-gray-50 border rounded-md" x-text="detail.history.deskripsi_kehilangan"></p>
-                            </div>
-                        </template>
+                        <div x-show="!loading && detail" class="space-y-4">
+                            <template x-if="detail">
+                                <div>
+                                    <template x-if="modalType === 'pengembalian' && detail.status_pengembalian">
+                                        <div class="p-4 mb-4 text-sm rounded-lg border-l-4"
+                                             :class="{
+                                                'bg-red-100 border-red-500 text-red-800': detail.status_pengembalian.includes('Hilang'),
+                                                'bg-yellow-100 border-yellow-500 text-yellow-800': !detail.status_pengembalian.includes('Hilang') && detail.status_pengembalian.includes('Terlambat'),
+                                                'bg-green-100 border-green-500 text-green-800': detail.status_pengembalian === 'Aman'
+                                             }">
+                                            <p class="font-bold text-lg" x-text="detail.status_pengembalian"></p>
+                                            <ul class="mt-2 list-disc list-inside">
+                                                <template x-if="detail.hari_terlambat && detail.hari_terlambat > 0">
+                                                    <li x-text="`Terlambat ${detail.hari_terlambat} hari.`"></li>
+                                                </template>
+                                                <template x-if="detail.total_hilang && detail.total_hilang > 0">
+                                                    <li x-text="`Kehilangan ${detail.total_hilang} unit barang.`"></li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </template>
 
-                        <div class="mt-6 flex justify-end gap-3">
-                            <form :action="formActionTolak" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menolak permintaan ini?');">
-                                @csrf
-                                <button type="submit" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Tolak</button>
-                            </form>
-                            <form :action="formActionTerima" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menyetujui permintaan ini?');">
-                                @csrf
-                                <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">Terima</button>
-                            </form>
+                                    <h4 class="font-semibold text-md mb-2">Rincian Barang</h4>
+                                    <div class="border rounded-lg overflow-hidden mb-4">
+                                        <table class="w-full text-sm">
+                                            <thead class="bg-gray-50">
+                                                <tr>
+                                                    <th class="px-4 py-2 text-left font-semibold text-gray-600">Nama Barang</th>
+                                                    <th class="px-4 py-2 text-center font-semibold text-gray-600">Jumlah</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <template x-for="item in detail.detail_peminjaman" :key="item.id">
+                                                    <tr class="border-t">
+                                                        <td class="px-4 py-2" x-text="item.barang.nama_barang"></td>
+                                                        <td class="px-4 py-2 text-center" x-text="item.jumlah + ' pcs'"></td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <template x-if="modalType === 'pengembalian' && detail.history && detail.history.gambar_bukti">
+                                        <div>
+                                            <h4 class="font-semibold text-md mb-2">Bukti Pengembalian</h4>
+                                            <div class="border rounded-lg p-2">
+                                                <img :src="`{{ asset('storage') }}/${detail.history.gambar_bukti}`" alt="Bukti Pengembalian" class="w-full h-auto rounded-md">
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <div class="flex justify-end mt-6 space-x-2">
+                                        <button @click="isModalOpen = false" type="button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">Tutup</button>
+                                        
+                                        <form :action="modalType === 'peminjaman' ? `{{ url('admin/konfirmasi/tolak-peminjaman') }}/${detail.id}` : `{{ url('admin/konfirmasi/tolak-pengembalian') }}/${detail.id}`" method="POST">
+                                            @csrf
+                                            <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">Tolak</button>
+                                        </form>
+
+                                        <form :action="modalType === 'peminjaman' ? `{{ url('admin/konfirmasi/terima-peminjaman') }}/${detail.id}` : `{{ url('admin/konfirmasi/terima-pengembalian') }}/${detail.id}`" method="POST">
+                                            @csrf
+                                            <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">Terima</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </div>
@@ -194,45 +213,36 @@
     <script>
         function konfirmasiData() {
             return {
-                showModal: false,
-                loading: false,
+                isModalOpen: false,
+                modalType: '',
                 detail: null,
-                modalTitle: '',
-                modalType: '', // 'peminjaman' atau 'pengembalian'
-                formActionTerima: '',
-                formActionTolak: '',
-                fetchDetail(id, type) {
-                    this.showModal = true;
+                loading: false,
+                openModal(type, id) {
+                    this.isModalOpen = true;
+                    this.modalType = type;
+                    this.fetchDetail(id);
+                },
+                fetchDetail(id) {
                     this.loading = true;
                     this.detail = null;
-                    this.modalType = type;
-                    this.modalTitle = type === 'peminjaman' ? 'Detail Permintaan Peminjaman' : 'Detail Permintaan Pengembalian';
-                    
-                    // --- PERBAIKAN NAMA RUTE ---
-                    const terimaRoute = type === 'peminjaman' ? '{{ route("admin.konfirmasi.terimaPeminjaman", ["id" => ":id"]) }}' : '{{ route("admin.konfirmasi.terimaPengembalian", ["id" => ":id"]) }}';
-                    const tolakRoute = type === 'peminjaman' ? '{{ route("admin.konfirmasi.tolakPeminjaman", ["id" => ":id"]) }}' : '{{ route("admin.konfirmasi.tolakPengembalian", ["id" => ":id"]) }}';
-
-                    this.formActionTerima = terimaRoute.replace(':id', id);
-                    this.formActionTolak = tolakRoute.replace(':id', id);
-
                     fetch(`/admin/konfirmasi/${id}`)
                         .then(response => {
-                            if (!response.ok) throw new Error('Gagal mengambil data');
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
                             return response.json();
                         })
                         .then(data => {
                             this.detail = data;
                             this.loading = false;
                         })
-                        .catch(() => {
+                        .catch(error => {
+                            console.error('Error fetching detail:', error);
                             this.loading = false;
-                            alert('Gagal memuat detail.');
-                            this.showModal = false;
                         });
                 }
-            }
+            };
         }
     </script>
     @endpush
 </x-admin-layout>
-

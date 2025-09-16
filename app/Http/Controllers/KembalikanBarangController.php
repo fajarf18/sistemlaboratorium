@@ -46,6 +46,7 @@ class KembalikanBarangController extends Controller
 
         $request->validate([
             'tanggal_kembali' => 'required|date',
+            // Nama input di form adalah 'gambar_bukti'
             'gambar_bukti' => 'nullable|image|max:2048',
             'items' => 'required|json',
             'deskripsi_kehilangan' => $adaBarangHilang ? 'required|string' : 'nullable|string',
@@ -53,11 +54,20 @@ class KembalikanBarangController extends Controller
 
         $userId = Auth::id();
         $isTerlambat = false;
-        $peminjamanUntukNotifikasi = null; // Ganti nama variabel agar lebih jelas
+        $peminjamanUntukNotifikasi = null;
         $peminjamanIdsToUpdate = [];
 
         DB::beginTransaction();
         try {
+            // ================= PERBAIKAN LOGIKA GAMBAR =================
+            // 1. Proses dan simpan gambar terlebih dahulu jika ada.
+            $imagePath = null;
+            if ($request->hasFile('gambar_bukti')) {
+                // Simpan file di 'storage/app/public/bukti_pengembalian'
+                $imagePath = $request->file('gambar_bukti')->store('bukti_pengembalian', 'public');
+            }
+            // ==========================================================
+
             foreach ($items as $itemData) {
                 $detail = DetailPeminjaman::with('peminjaman', 'barang')
                     ->where('id', $itemData['id'])
@@ -65,7 +75,6 @@ class KembalikanBarangController extends Controller
                         $q->where('user_id', $userId)->where('status', 'Dipinjam');
                     })->firstOrFail();
 
-                // Ambil objek peminjaman untuk digunakan nanti (hanya sekali)
                 if (!$peminjamanUntukNotifikasi) {
                     $peminjamanUntukNotifikasi = $detail->peminjaman;
                 }
@@ -92,36 +101,34 @@ class KembalikanBarangController extends Controller
             }
 
             $tanggalKembaliCarbon = Carbon::parse($request->tanggal_kembali);
-            $tanggalWajibKembaliCarbon = Carbon::parse($peminjamanUntukNotifikasi->tanggal_wajib_kembali);
+            $tanggalWajibKembaliCarbon = Carbon::parse($peminjamanUntukNotifikasi->tanggal_pinjam)->addDays(3);
 
             if ($tanggalKembaliCarbon->isAfter($tanggalWajibKembaliCarbon)) {
                 $isTerlambat = true;
             }
 
             $statusPengembalian = 'Aman';
-            if ($adaBarangHilang) $statusPengembalian = 'Hilang';
-            if ($isTerlambat) $statusPengembalian = $adaBarangHilang ? 'Hilang dan Terlambat' : 'Terlambat';
+            if ($adaBarangHilang && $isTerlambat) {
+                $statusPengembalian = 'Hilang dan Terlambat';
+            } elseif ($adaBarangHilang) {
+                $statusPengembalian = 'Hilang';
+            } elseif ($isTerlambat) {
+                $statusPengembalian = 'Terlambat';
+            }
 
-            $history = HistoryPeminjaman::create([
+            // 2. Buat history record dengan path gambar yang sudah diproses.
+            HistoryPeminjaman::create([
                 'peminjaman_id' => $peminjamanUntukNotifikasi->id,
                 'user_id' => $userId,
                 'tanggal_kembali' => $request->tanggal_kembali,
                 'status_pengembalian' => $statusPengembalian,
                 'deskripsi_kehilangan' => $adaBarangHilang ? $request->deskripsi_kehilangan : null,
-                'gambar_bukti' => null,
+                'gambar_bukti' => $imagePath, // Gunakan variabel path yang sudah disiapkan
             ]);
-            
-            if ($request->hasFile('gambar_bukti')) {
-                $path = $request->file('gambar_bukti')->store('bukti_pengembalian', 'public');
-                $history->gambar_bukti = $path;
-                $history->save();
-            }
 
             DB::commit();
 
-            // --- TAMBAHAN: Logika Pengiriman Email Ditempatkan di Sini ---
             try {
-                // Muat ulang data peminjaman beserta relasinya untuk memastikan data terbaru
                 $peminjamanLengkap = Peminjaman::with('user', 'detailPeminjaman.barang')->find($peminjamanUntukNotifikasi->id);
                 if ($peminjamanLengkap) {
                     Mail::to(config('app.admin_email'))->send(new ItemReturnNotification($peminjamanLengkap));
@@ -129,8 +136,8 @@ class KembalikanBarangController extends Controller
             } catch (\Exception $e) {
                 \Log::error('Gagal mengirim email notifikasi pengembalian: '. $e->getMessage());
             }
-            // --- AKHIR TAMBAHAN ---
 
+            // Arahkan ke rute history yang benar
             return redirect()->route('user.history.index')->with('pengembalian_sukses', true);
 
         } catch (\Exception $e) {

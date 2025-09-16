@@ -111,11 +111,17 @@
             <p class="text-2xl font-bold text-gray-800 mb-2">Apakah Sudah Sesuai?</p>
             <p class="text-gray-500 text-sm mb-6">Jika Sudah Bisa Klik Sudah, Jika belum Klik Belum</p>
             
-            <form action="{{ route('user.checkout.process') }}" method="POST">
-                @csrf
-                <input type="hidden" name="items" :value="JSON.stringify(selectedItems)">
-                <div class="space-y-3">
-                    <button type="submit" class="w-full rounded-lg bg-blue-600 text-white py-3 font-semibold hover:bg-blue-700 transition">Sudah</button>
+            <form action="{{ route('user.checkout.process') }}" method="POST" @submit="isProcessing = true">
+            @csrf
+            <input type="hidden" name="items" :value="JSON.stringify(selectedItems)">
+            <div class="space-y-3">
+                     <button type="submit" 
+                        :disabled="isProcessing"
+                        class="w-full rounded-lg bg-blue-600 text-white py-3 font-semibold hover:bg-blue-700 transition"
+                        :class="{'bg-gray-400 cursor-not-allowed': isProcessing, 'hover:bg-blue-700': !isProcessing}">
+                    <span x-show="!isProcessing">Sudah</span>
+                    <span x-show="isProcessing">Memproses...</span>
+                </button>
                     <button type="button" @click="showModal = false" class="w-full rounded-lg bg-white text-gray-700 py-3 font-semibold border border-gray-300 hover:bg-gray-100 transition">Belum</button>
                 </div>
             </form>
@@ -142,6 +148,7 @@
             showModal: false,
             checkoutSuccess: checkoutSuccess,
             selectedItems: [],
+            isProcessing: false,
             toggleAll(checked) {
                 let validItems = [];
                 if (checked) {
