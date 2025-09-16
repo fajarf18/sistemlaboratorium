@@ -40,7 +40,12 @@
             </svg>
             <span class="font-medium">Persetujuan</span>
         </a>
-        
+         <a href="{{ route('admin.status.index') }}" class="{{ request()->routeIs('admin.status.index') ? 'bg-sky-200 text-sky-700' : 'text-gray-600 hover:bg-sky-100' }} flex items-center gap-3 rounded-lg px-4 py-2.5 transition-all">
+            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m-7.5-2.963A3.426 3.426 0 0010.5 6.57a4.5 4.5 0 018.337 2.083v.357a4.5 4.5 0 01-8.337 2.083m-7.5-2.963A3.426 3.426 0 003 6.57a4.5 4.5 0 018.337 2.083v.357a4.5 4.5 0 01-8.337-2.083zM3 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m5.963 2.72a3.426 3.426 0 01-3.163 2.083 4.5 4.5 0 01-8.337-2.083v-.357a4.5 4.5 0 018.337-2.083m5.963 2.72a3.426 3.426 0 013.163 2.083 4.5 4.5 0 01-8.337-2.083v-.357a4.5 4.5 0 018.337-2.083z" />
+            </svg>
+            <span class="font-medium">Status Pengguna</span>
+        </a>
         {{-- PERUBAHAN DI SINI: Ikon Pengguna --}}
         <a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.index') ? 'bg-sky-200 text-sky-700' : 'text-gray-600 hover:bg-sky-100' }} flex items-center gap-3 rounded-lg px-4 py-2.5 transition-all">
             <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
