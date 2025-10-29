@@ -22,6 +22,7 @@ protected $fillable = [
     'nama',
     'nim',
     'email',
+    'nomor_wa',
     'prodi',
     'semester',
     'password',
@@ -57,4 +58,8 @@ protected $fillable = [
 {
     return $this->hasMany(Keranjang::class);
 }
+ public function peminjamans()
+    {
+        return $this->hasMany(Peminjaman::class);
+    }
 }

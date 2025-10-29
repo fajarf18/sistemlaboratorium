@@ -27,6 +27,7 @@
                 <tr>
                     <th scope="col" class="px-6 py-3">Item Name</th>
                     <th scope="col" class="px-6 py-3">Amount</th>
+                    <th scope="col" class="px-6 py-3">Dosen Pengampu</th>
                     <th scope="col" class="px-6 py-3">Tanggal Pinjam</th>
                     <th scope="col" class="px-6 py-3">Wajib Kembali</th>
                     <th scope="col" class="px-6 py-3 text-center">Status</th>
@@ -40,6 +41,14 @@
                             {{ $detail->barang->nama_barang }}
                         </th>
                         <td class="px-6 py-4 align-middle">{{ $detail->jumlah }} pcs</td>
+                        <td class="px-6 py-4 align-middle">
+                            @if($peminjaman->dosenPengampu)
+                                <div class="font-medium text-gray-900">{{ $peminjaman->dosenPengampu->nama }}</div>
+                                <div class="text-xs text-gray-500">{{ $peminjaman->dosenPengampu->mata_kuliah ?? '-' }}</div>
+                            @else
+                                <span class="text-gray-400 italic">-</span>
+                            @endif
+                        </td>
                         <td class="px-6 py-4 align-middle">{{ \Carbon\Carbon::parse($peminjaman->tanggal_pinjam)->format('d/m/Y') }}</td>
                         <td class="px-6 py-4 align-middle">
                             @php
@@ -71,7 +80,7 @@
                     @endforeach
                 @empty
                 <tr>
-                    <td colspan="5" class="text-center py-10 text-gray-500">Tidak ada pinjaman aktif.</td>
+                    <td colspan="6" class="text-center py-10 text-gray-500">Tidak ada pinjaman aktif.</td>
                 </tr>
                 @endforelse
             </tbody>

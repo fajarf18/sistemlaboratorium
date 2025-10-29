@@ -4,10 +4,17 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Barang;
+use App\Models\BarangUnit;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use App\Exports\BarangsExport;
+use App\Exports\BarangsTemplateExport;
+use App\Imports\BarangsImport;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Validators\ValidationException;
 
 class BarangController extends Controller
 {
@@ -73,16 +80,31 @@ class BarangController extends Controller
             $path = $request->file('gambar')->store('barang', 'public');
         }
 
-        Barang::create([
-            'nama_barang' => $request->nama_barang,
-            'kode_barang' => $newKodeBarang,
-            'tipe' => $request->tipe,
-            'stok' => $request->stok,
-            'gambar' => $path,
-            'deskripsi' => $request->deskripsi,
-        ]);
+        DB::transaction(function () use ($request, $newKodeBarang, $path) {
+            // Buat barang
+            $barang = Barang::create([
+                'nama_barang' => $request->nama_barang,
+                'kode_barang' => $newKodeBarang,
+                'tipe' => $request->tipe,
+                'stok' => $request->stok,
+                'gambar' => $path,
+                'deskripsi' => $request->deskripsi,
+            ]);
 
-        return redirect()->route('admin.barang.index')->with('success', 'Barang berhasil ditambahkan.');
+            // Auto-generate unit barang sesuai stok
+            if ($request->stok > 0) {
+                for ($i = 1; $i <= $request->stok; $i++) {
+                    BarangUnit::create([
+                        'barang_id' => $barang->id,
+                        'unit_code' => $newKodeBarang . '-' . str_pad($i, 3, '0', STR_PAD_LEFT),
+                        'status' => 'baik',
+                        'keterangan' => null,
+                    ]);
+                }
+            }
+        });
+
+        return redirect()->route('admin.barang.index')->with('success', 'Barang berhasil ditambahkan dengan ' . $request->stok . ' unit.');
     }
 
     /**
@@ -109,14 +131,51 @@ class BarangController extends Controller
             $path = $request->file('gambar')->store('barang', 'public');
         }
 
-        $barang->update([
-            'nama_barang' => $request->nama_barang,
-            'kode_barang' => $request->kode_barang,
-            'tipe' => $request->tipe,
-            'stok' => $request->stok,
-            'gambar' => $path,
-            'deskripsi' => $request->deskripsi,
-        ]);
+        DB::transaction(function () use ($request, $barang, $path) {
+            $oldStok = $barang->stok;
+            $newStok = $request->stok;
+            $stokDiff = $newStok - $oldStok;
+
+            // Update data barang
+            $barang->update([
+                'nama_barang' => $request->nama_barang,
+                'kode_barang' => $request->kode_barang,
+                'tipe' => $request->tipe,
+                'stok' => $request->stok,
+                'gambar' => $path,
+                'deskripsi' => $request->deskripsi,
+            ]);
+
+            // Handle perubahan stok
+            if ($stokDiff > 0) {
+                // Stok bertambah - buat unit baru
+                $existingUnitsCount = $barang->units()->count();
+                for ($i = 1; $i <= $stokDiff; $i++) {
+                    $unitNumber = $existingUnitsCount + $i;
+                    BarangUnit::create([
+                        'barang_id' => $barang->id,
+                        'unit_code' => $request->kode_barang . '-' . str_pad($unitNumber, 3, '0', STR_PAD_LEFT),
+                        'status' => 'baik',
+                        'keterangan' => null,
+                    ]);
+                }
+            } elseif ($stokDiff < 0) {
+                // Stok berkurang - hapus unit dengan status 'baik' yang tidak sedang dipinjam
+                $unitsToDelete = abs($stokDiff);
+                $availableUnits = $barang->units()
+                    ->where('status', 'baik')
+                    ->limit($unitsToDelete)
+                    ->get();
+
+                if ($availableUnits->count() < $unitsToDelete) {
+                    throw new \Exception('Tidak dapat mengurangi stok. Hanya ada ' . $availableUnits->count() . ' unit dengan status baik yang tersedia.');
+                }
+
+                foreach ($availableUnits as $unit) {
+                    $unit->delete();
+                }
+            }
+        });
 
         return redirect()->route('admin.barang.index')->with('success', 'Barang berhasil diperbarui.');
     }
@@ -126,53 +185,69 @@ class BarangController extends Controller
      */
     public function destroy(Barang $barang)
     {
-        // Hapus gambar dari storage jika ada
-        if ($barang->gambar) {
-            Storage::disk('public')->delete($barang->gambar);
-        }
-        $barang->delete();
-        return redirect()->route('admin.barang.index')->with('success', 'Barang berhasil dihapus.');
+        DB::transaction(function () use ($barang) {
+            // Hapus gambar dari storage jika ada
+            if ($barang->gambar) {
+                Storage::disk('public')->delete($barang->gambar);
+            }
+
+            // Hapus semua unit barang terkait
+            $barang->units()->delete();
+
+            // Hapus barang
+            $barang->delete();
+        });
+
+        return redirect()->route('admin.barang.index')->with('success', 'Barang dan semua unitnya berhasil dihapus.');
     }
     /**
-     * Men-download data barang sebagai file CSV.
+     * Men-download data barang sebagai file Excel.
      */
     public function download()
     {
-        $barangs = Barang::all();
-        $fileName = "data-barang-" . date('Y-m-d') . ".csv";
+        $fileName = "Data-Barang-" . date('Y-m-d-His') . ".xlsx";
+        return Excel::download(new BarangsExport, $fileName);
+    }
 
-        $headers = array(
-            "Content-type"        => "text/csv",
-            "Content-Disposition" => "attachment; filename=$fileName",
-            "Pragma"              => "no-cache",
-            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-            "Expires"             => "0"
-        );
+    /**
+     * Men-download template import Excel.
+     */
+    public function downloadTemplate()
+    {
+        $fileName = "Template-Import-Barang.xlsx";
+        return Excel::download(new BarangsTemplateExport, $fileName);
+    }
 
-        $columns = array('ID Barang', 'Nama Barang', 'Tipe', 'Stok', 'Deskripsi', 'Tanggal Dibuat');
+    /**
+     * Import data barang dari Excel.
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls|max:2048',
+        ], [
+            'file.required' => 'File Excel wajib dipilih.',
+            'file.mimes' => 'File harus berformat Excel (.xlsx atau .xls).',
+            'file.max' => 'Ukuran file maksimal 2MB.',
+        ]);
 
-        $callback = function() use($barangs, $columns) {
-            $file = fopen('php://output', 'w');
-            fwrite($file, "\xEF\xBB\xBF");
-            fputcsv($file, $columns, ';');
+        try {
+            Excel::import(new BarangsImport, $request->file('file'));
 
-            foreach ($barangs as $barang) {
-                $idBarang = '="' . $barang->kode_barang . '"';
-                $tanggalDibuat = '="' . $barang->created_at->format('d/m/Y') . '"';
+            return redirect()->route('admin.barang.index')->with('success', 'Data barang berhasil diimport dari Excel.');
+        } catch (ValidationException $e) {
+            $failures = $e->failures();
+            $errors = [];
 
-                fputcsv($file, [
-                    $idBarang,
-                    $barang->nama_barang,
-                    $barang->tipe,
-                    $barang->stok,
-                    $barang->deskripsi,
-                    $tanggalDibuat
-                ], ';');
+            foreach ($failures as $failure) {
+                $errors[] = "Baris {$failure->row()}: " . implode(', ', $failure->errors());
             }
 
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+            return redirect()->route('admin.barang.index')
+                ->with('error', 'Gagal import data')
+                ->with('import_errors', $errors);
+        } catch (\Exception $e) {
+            return redirect()->route('admin.barang.index')->with('error', 'Gagal import data: ' . $e->getMessage());
+        }
     }
 }

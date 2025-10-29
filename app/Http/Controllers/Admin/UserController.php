@@ -9,6 +9,7 @@ use Illuminate\View\View;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash; // Import Hash facade
 use Illuminate\Validation\Rules;      // Import Rules facade
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
@@ -51,13 +52,14 @@ class UserController extends Controller
             'nama' => ['required', 'string', 'max:255'],
             'nim' => ['required', 'string', 'max:255', Rule::unique('users')->ignore($user->id)],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'nomor_wa' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\-\s()]+$/'],
             'prodi' => ['required', 'string', 'max:255'],
             'semester' => ['required', 'integer', 'min:1'],
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()], // Password opsional, tapi jika diisi harus terkonfirmasi
         ]);
 
         // Update data utama pengguna
-        $user->update($request->only('nama', 'nim', 'email', 'prodi', 'semester'));
+        $user->update($request->only('nama', 'nim', 'email', 'nomor_wa', 'prodi', 'semester'));
 
         // Jika ada input password baru, update passwordnya
         if ($request->filled('password')) {
@@ -71,13 +73,43 @@ class UserController extends Controller
     /**
      * Menghapus pengguna.
      */
-    public function destroy(User $user)
+   public function destroy(User $user)
     {
-        if ($user->peminjamans()->count() > 0) {
-            return back()->with('error', 'Gagal! Pengguna ini memiliki riwayat peminjaman dan tidak dapat dihapus.');
+        // Pastikan kita tidak menghapus admin
+        if ($user->role === 'admin') {
+            return back()->with('error', 'Admin tidak dapat dihapus.');
         }
-        $user->delete();
-        return redirect()->route('admin.users.index')->with('success', 'Pengguna berhasil dihapus.');
+
+        // ================= LOGIKA PENGHAPUSAN BERANTAI =================
+        try {
+            DB::transaction(function () use ($user) {
+                // 1. Muat semua relasi peminjaman milik pengguna
+                $peminjamans = $user->peminjamans()->with(['detailPeminjaman', 'history'])->get();
+
+                foreach ($peminjamans as $peminjaman) {
+                    // 2. Hapus semua detail peminjaman terkait
+                    $peminjaman->detailPeminjaman()->delete();
+                    
+                    // 3. Hapus history peminjaman terkait (jika ada)
+                    if ($peminjaman->history) {
+                        $peminjaman->history()->delete();
+                    }
+                }
+
+                // 4. Setelah relasi anaknya dihapus, hapus semua peminjaman
+                $user->peminjamans()->delete();
+
+                // 5. Terakhir, hapus pengguna itu sendiri
+                $user->delete();
+            });
+
+            return redirect()->route('admin.users.index')->with('success', 'Pengguna berhasil dihapus.');
+
+        } catch (\Exception $e) {
+            // Jika terjadi error, batalkan semua operasi dan tampilkan pesan
+            return back()->with('error', 'Gagal menghapus pengguna: ' . $e->getMessage());
+        }
+        // ===============================================================
     }
 
     /**
@@ -94,7 +126,8 @@ class UserController extends Controller
             $query->where(function($q) use ($search) {
                 $q->where('nama', 'like', '%' . $search . '%')
                   ->orWhere('nim', 'like', '%' . $search . '%')
-                  ->orWhere('email', 'like', '%' . $search . '%');
+                  ->orWhere('email', 'like', '%' . $search . '%')
+                  ->orWhere('nomor_wa', 'like', '%' . $search . '%');
             });
         }
         if ($prodi) $query->where('prodi', $prodi);
@@ -111,7 +144,7 @@ class UserController extends Controller
             "Expires"             => "0"
         ];
 
-        $columns = ['NIM', 'Nama', 'Email', 'Prodi', 'Semester', 'Tanggal Daftar'];
+        $columns = ['NIM', 'Nama', 'Email', 'Nomor WA', 'Prodi', 'Semester', 'Tanggal Daftar'];
 
         $callback = function() use($users, $columns) {
             $file = fopen('php://output', 'w');
@@ -122,6 +155,7 @@ class UserController extends Controller
                     $user->nim,
                     $user->nama,
                     $user->email,
+                    $user->nomor_wa ?? '-',
                     $user->prodi,
                     $user->semester,
                     $user->created_at->format('d/m/Y')

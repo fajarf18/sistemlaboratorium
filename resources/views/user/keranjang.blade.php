@@ -103,26 +103,44 @@
 
     <!-- Modal Konfirmasi Checkout -->
     <div x-show="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
-        <div @click.outside="showModal = false" class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8 text-center">
+        <div @click.outside="showModal = false" class="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
             <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-500">
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
             </div>
-            <h3 class="text-xl font-bold text-gray-800">Cek Kembali Barang</h3>
-            <p class="text-2xl font-bold text-gray-800 mb-2">Apakah Sudah Sesuai?</p>
-            <p class="text-gray-500 text-sm mb-6">Jika Sudah Bisa Klik Sudah, Jika belum Klik Belum</p>
-            
+            <h3 class="text-xl font-bold text-gray-800 text-center">Konfirmasi Checkout</h3>
+            <p class="text-gray-500 text-sm mb-4 text-center">Pilih dosen pengampu dan cek kembali barang Anda</p>
+
             <form action="{{ route('user.checkout.process') }}" method="POST" @submit="isProcessing = true">
-            @csrf
-            <input type="hidden" name="items" :value="JSON.stringify(selectedItems)">
-            <div class="space-y-3">
-                     <button type="submit" 
-                        :disabled="isProcessing"
-                        class="w-full rounded-lg bg-blue-600 text-white py-3 font-semibold hover:bg-blue-700 transition"
-                        :class="{'bg-gray-400 cursor-not-allowed': isProcessing, 'hover:bg-blue-700': !isProcessing}">
-                    <span x-show="!isProcessing">Sudah</span>
-                    <span x-show="isProcessing">Memproses...</span>
-                </button>
-                    <button type="button" @click="showModal = false" class="w-full rounded-lg bg-white text-gray-700 py-3 font-semibold border border-gray-300 hover:bg-gray-100 transition">Belum</button>
+                @csrf
+                <input type="hidden" name="items" :value="JSON.stringify(selectedItems)">
+
+                <div class="mb-4">
+                    <label for="dosen_pengampu_id" class="block text-sm font-medium text-gray-700 mb-2">
+                        Dosen Pengampu <span class="text-red-500">*</span>
+                    </label>
+                    <select name="dosen_pengampu_id" id="dosen_pengampu_id" required
+                            class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                        <option value="">-- Pilih Dosen Pengampu --</option>
+                        @foreach($dosens as $dosen)
+                            <option value="{{ $dosen->id }}">
+                                {{ $dosen->nama }} - {{ $dosen->mata_kuliah ?? 'Umum' }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('dosen_pengampu_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="space-y-3">
+                    <button type="submit"
+                            :disabled="isProcessing"
+                            class="w-full rounded-lg bg-blue-600 text-white py-3 font-semibold hover:bg-blue-700 transition"
+                            :class="{'bg-gray-400 cursor-not-allowed': isProcessing, 'hover:bg-blue-700': !isProcessing}">
+                        <span x-show="!isProcessing">Checkout Sekarang</span>
+                        <span x-show="isProcessing">Memproses...</span>
+                    </button>
+                    <button type="button" @click="showModal = false" class="w-full rounded-lg bg-white text-gray-700 py-3 font-semibold border border-gray-300 hover:bg-gray-100 transition">Batal</button>
                 </div>
             </form>
         </div>

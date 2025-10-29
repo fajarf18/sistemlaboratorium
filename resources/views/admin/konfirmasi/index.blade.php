@@ -48,6 +48,7 @@
                             <thead class="text-xs font-semibold uppercase text-gray-400 bg-gray-50">
                                 <tr>
                                     <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Nama Peminjam</div></th>
+                                    <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Dosen Pengampu</div></th>
                                     <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Tanggal Pinjam</div></th>
                                     <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Tanggal Wajib Kembali</div></th>
                                     <th class="p-2 whitespace-nowrap"><div class="font-semibold text-center">Aksi</div></th>
@@ -57,6 +58,14 @@
                                 @forelse ($peminjamanMenunggu as $item)
                                     <tr>
                                         <td class="p-2 whitespace-nowrap">{{ $item->user->nama }}</td>
+                                        <td class="p-2 whitespace-nowrap">
+                                            @if($item->dosenPengampu)
+                                                <div class="font-medium text-gray-900">{{ $item->dosenPengampu->nama }}</div>
+                                                <div class="text-xs text-gray-500">{{ $item->dosenPengampu->mata_kuliah ?? '-' }}</div>
+                                            @else
+                                                <span class="text-gray-400 italic">-</span>
+                                            @endif
+                                        </td>
                                         <td class="p-2 whitespace-nowrap">{{ \Carbon\Carbon::parse($item->tanggal_pinjam)->isoFormat('D MMMM YYYY') }}</td>
                                         <td class="p-2 whitespace-nowrap">{{ \Carbon\Carbon::parse($item->tanggal_wajib_kembali)->isoFormat('D MMMM YYYY') }}</td>
                                         <td class="p-2 whitespace-nowrap text-center">
@@ -66,7 +75,7 @@
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="4" class="p-4 text-center text-gray-500">Tidak ada permintaan peminjaman.</td></tr>
+                                    <tr><td colspan="5" class="p-4 text-center text-gray-500">Tidak ada permintaan peminjaman.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
@@ -88,6 +97,7 @@
                              <thead class="text-xs font-semibold uppercase text-gray-400 bg-gray-50">
                                 <tr>
                                     <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Nama Peminjam</div></th>
+                                    <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Dosen Pengampu</div></th>
                                     <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Tanggal Pinjam</div></th>
                                     <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Tanggal Wajib Kembali</div></th>
                                     <th class="p-2 whitespace-nowrap"><div class="font-semibold text-center">Aksi</div></th>
@@ -97,6 +107,14 @@
                                 @forelse ($pengembalianMenunggu as $item)
                                     <tr>
                                         <td class="p-2 whitespace-nowrap">{{ $item->user->nama }}</td>
+                                        <td class="p-2 whitespace-nowrap">
+                                            @if($item->dosenPengampu)
+                                                <div class="font-medium text-gray-900">{{ $item->dosenPengampu->nama }}</div>
+                                                <div class="text-xs text-gray-500">{{ $item->dosenPengampu->mata_kuliah ?? '-' }}</div>
+                                            @else
+                                                <span class="text-gray-400 italic">-</span>
+                                            @endif
+                                        </td>
                                         <td class="p-2 whitespace-nowrap">{{ \Carbon\Carbon::parse($item->tanggal_pinjam)->isoFormat('D MMMM YYYY') }}</td>
                                         <td class="p-2 whitespace-nowrap">{{ \Carbon\Carbon::parse($item->tanggal_wajib_kembali)->isoFormat('D MMMM YYYY') }}</td>
                                         <td class="p-2 whitespace-nowrap text-center">
@@ -106,7 +124,7 @@
                                         </td>
                                     </tr>
                                 @empty
-                                     <tr><td colspan="4" class="p-4 text-center text-gray-500">Tidak ada permintaan pengembalian.</td></tr>
+                                     <tr><td colspan="5" class="p-4 text-center text-gray-500">Tidak ada permintaan pengembalian.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
@@ -189,6 +207,7 @@
                                         <tr>
                                             <th class="px-4 py-2 text-left font-semibold text-gray-600">Nama Barang</th>
                                             <th class="px-4 py-2 text-center font-semibold text-gray-600">Jumlah</th>
+                                            <th class="px-4 py-2 text-center font-semibold text-gray-600">Detail Units</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -196,6 +215,11 @@
                                             <tr class="border-t">
                                                 <td class="px-4 py-2" x-text="item.barang.nama_barang"></td>
                                                 <td class="px-4 py-2 text-center" x-text="item.jumlah + ' pcs'"></td>
+                                                <td class="px-4 py-2 text-center">
+                                                    <button @click="openUnitsModal(item)" class="px-3 py-1 text-xs font-medium text-white bg-purple-500 rounded hover:bg-purple-600">
+                                                        View Units
+                                                    </button>
+                                                </td>
                                             </tr>
                                         </template>
                                     </tbody>
@@ -228,7 +252,154 @@
             </div>
         </div>
     </div>
-</div>  
+</div>
+
+{{-- Modal Nested untuk Detail Units --}}
+<div x-show="isUnitsModalOpen" @keydown.escape.window="isUnitsModalOpen = false" class="fixed inset-0 z-[60] overflow-y-auto" style="display: none;">
+    <div class="flex items-center justify-center min-h-screen px-4 text-center">
+        <div @click="isUnitsModalOpen = false" x-show="isUnitsModalOpen" class="fixed inset-0 transition-opacity bg-gray-900 bg-opacity-60"></div>
+
+        <div x-show="isUnitsModalOpen" class="inline-block w-full max-w-3xl p-6 my-8 overflow-hidden text-left transition-all transform bg-white rounded-lg shadow-xl">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-gray-800">
+                    Detail Units - <span x-text="selectedItem?.barang?.nama_barang"></span>
+                </h2>
+                <button @click="isUnitsModalOpen = false" class="text-gray-600 hover:text-gray-800">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            {{-- Ringkasan untuk Pengembalian --}}
+            <template x-if="modalType === 'pengembalian'">
+                <div class="mb-4 p-3 bg-gray-50 rounded">
+                    <div class="grid grid-cols-3 gap-2 text-sm">
+                        <div>
+                            <p class="text-gray-600">Total Unit</p>
+                            <p class="text-lg font-bold" x-text="selectedItem?.jumlah"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600">Dikembalikan Baik</p>
+                            <p class="text-lg font-bold text-green-600" x-text="getUnitsByStatus('dikembalikan')"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600">Rusak/Hilang</p>
+                            <p class="text-lg font-bold text-red-600" x-text="getUnitsByStatus('rusak') + getUnitsByStatus('hilang')"></p>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            {{-- Ringkasan untuk Peminjaman --}}
+            <template x-if="modalType === 'peminjaman'">
+                <div class="mb-4 p-3 bg-blue-50 rounded border-l-4 border-blue-500">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                        <div>
+                            <p class="text-sm text-gray-700">Unit yang akan dipinjam:</p>
+                            <p class="text-lg font-bold text-blue-700" x-text="selectedItem?.jumlah + ' unit'"></p>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <div class="border rounded-lg overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left font-semibold">No</th>
+                            <th class="px-4 py-2 text-left font-semibold">Kode Unit</th>
+                            <th class="px-4 py-2 text-left font-semibold">Status Unit</th>
+                            <template x-if="modalType === 'pengembalian'">
+                                <th class="px-4 py-2 text-left font-semibold">Status Pengembalian</th>
+                            </template>
+                            <template x-if="modalType === 'pengembalian'">
+                                <th class="px-4 py-2 text-left font-semibold">Keterangan</th>
+                            </template>
+                            <template x-if="modalType === 'pengembalian'">
+                                <th class="px-4 py-2 text-center font-semibold">Foto</th>
+                            </template>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        <template x-for="(unit, index) in selectedItem?.peminjaman_units" :key="unit.id">
+                            <tr>
+                                <td class="px-4 py-3" x-text="index + 1"></td>
+                                <td class="px-4 py-3 font-mono text-xs" x-text="unit.barang_unit.unit_code"></td>
+                                <td class="px-4 py-3">
+                                    <span class="px-2 py-1 text-xs rounded-full font-semibold"
+                                          :class="{
+                                              'bg-green-100 text-green-700': unit.barang_unit.status === 'baik',
+                                              'bg-yellow-100 text-yellow-700': unit.barang_unit.status === 'rusak',
+                                              'bg-red-100 text-red-700': unit.barang_unit.status === 'hilang',
+                                              'bg-blue-100 text-blue-700': unit.barang_unit.status === 'dipinjam'
+                                          }"
+                                          x-text="unit.barang_unit.status?.charAt(0).toUpperCase() + unit.barang_unit.status?.slice(1)">
+                                    </span>
+                                </td>
+                                <template x-if="modalType === 'pengembalian'">
+                                    <td class="px-4 py-3">
+                                        <span class="px-2 py-1 text-xs rounded-full font-semibold"
+                                              :class="{
+                                                  'bg-green-100 text-green-700': unit.status_pengembalian === 'dikembalikan',
+                                                  'bg-yellow-100 text-yellow-700': unit.status_pengembalian === 'rusak',
+                                                  'bg-red-100 text-red-700': unit.status_pengembalian === 'hilang',
+                                                  'bg-gray-100 text-gray-700': unit.status_pengembalian === 'belum'
+                                              }"
+                                              x-text="unit.status_pengembalian?.charAt(0).toUpperCase() + unit.status_pengembalian?.slice(1)">
+                                        </span>
+                                    </td>
+                                </template>
+                                <template x-if="modalType === 'pengembalian'">
+                                    <td class="px-4 py-3 text-xs" x-text="unit.keterangan_kondisi || '-'"></td>
+                                </template>
+                                <template x-if="modalType === 'pengembalian'">
+                                    <td class="px-4 py-3 text-center">
+                                        <template x-if="unit.foto_kondisi">
+                                            <button @click="showPhotoModal(unit.foto_kondisi)" class="text-blue-600 hover:text-blue-800 text-xs underline">
+                                                Lihat Foto
+                                            </button>
+                                        </template>
+                                        <template x-if="!unit.foto_kondisi">
+                                            <span class="text-gray-400 text-xs">-</span>
+                                        </template>
+                                    </td>
+                                </template>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button @click="isUnitsModalOpen = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Modal untuk Preview Foto --}}
+<div x-show="isPhotoModalOpen" @keydown.escape.window="isPhotoModalOpen = false" class="fixed inset-0 z-[70] overflow-y-auto" style="display: none;">
+    <div class="flex items-center justify-center min-h-screen px-4 text-center">
+        <div @click="isPhotoModalOpen = false" x-show="isPhotoModalOpen" class="fixed inset-0 transition-opacity bg-black bg-opacity-75"></div>
+
+        <div x-show="isPhotoModalOpen" class="inline-block max-w-4xl p-4 my-8 overflow-hidden transition-all transform bg-white rounded-lg shadow-xl">
+            <div class="flex justify-end mb-2">
+                <button @click="isPhotoModalOpen = false" class="text-gray-600 hover:text-gray-800">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <img :src="`{{ asset('storage') }}/${selectedPhoto}`" class="w-full h-auto rounded" alt="Foto Kondisi Unit">
+        </div>
+    </div>
+</div>
 
     @push('scripts')
     <script>
@@ -238,11 +409,17 @@
                 modalType: '',
                 detail: null,
                 loading: false,
+                isUnitsModalOpen: false,
+                selectedItem: null,
+                isPhotoModalOpen: false,
+                selectedPhoto: null,
+
                 openModal(type, id) {
                     this.isModalOpen = true;
                     this.modalType = type;
                     this.fetchDetail(id);
                 },
+
                 fetchDetail(id) {
                     this.loading = true;
                     this.detail = null;
@@ -261,6 +438,21 @@
                             console.error('Error fetching detail:', error);
                             this.loading = false;
                         });
+                },
+
+                openUnitsModal(item) {
+                    this.selectedItem = item;
+                    this.isUnitsModalOpen = true;
+                },
+
+                getUnitsByStatus(status) {
+                    if (!this.selectedItem || !this.selectedItem.peminjaman_units) return 0;
+                    return this.selectedItem.peminjaman_units.filter(unit => unit.status_pengembalian === status).length;
+                },
+
+                showPhotoModal(photoPath) {
+                    this.selectedPhoto = photoPath;
+                    this.isPhotoModalOpen = true;
                 }
             };
         }

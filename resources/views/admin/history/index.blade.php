@@ -5,14 +5,33 @@
         </h2>
     </x-slot>
 
-    <div x-data="{ 
+    <div x-data="{
             showPreviewModal: false,
             showDeleteModal: false,
             previewItem: {},
-            itemToDelete: '', 
-            deleteAction: ''
-         }" 
-         @keydown.escape.window="showPreviewModal = false; showDeleteModal = false">
+            itemToDelete: '',
+            deleteAction: '',
+            isUnitsModalOpen: false,
+            selectedItem: null,
+            isPhotoModalOpen: false,
+            selectedPhoto: null,
+
+            openUnitsModal(item) {
+                this.selectedItem = item;
+                this.isUnitsModalOpen = true;
+            },
+
+            getUnitsByStatus(status) {
+                if (!this.selectedItem || !this.selectedItem.peminjaman_units) return 0;
+                return this.selectedItem.peminjaman_units.filter(unit => unit.status_pengembalian === status).length;
+            },
+
+            showPhotoModal(photoPath) {
+                this.selectedPhoto = photoPath;
+                this.isPhotoModalOpen = true;
+            }
+         }"
+         @keydown.escape.window="showPreviewModal = false; showDeleteModal = false; isUnitsModalOpen = false; isPhotoModalOpen = false">
         
         {{-- Notifikasi --}}
         @if (session('success'))
@@ -30,9 +49,9 @@
 
         <div class="bg-white p-6 rounded-xl shadow-sm">
             <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                <a href="{{ route('admin.history.download', request()->query()) }}" class="flex items-center justify-center gap-2 w-full md:w-auto px-4 py-2 border border-gray-300 text-sm font-semibold text-gray-700 rounded-lg hover:bg-gray-50">
+                <a href="{{ route('admin.history.download', request()->query()) }}" class="flex items-center justify-center gap-2 w-full md:w-auto px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition duration-150">
                     <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
-                    Download
+                    Download Excel
                 </a>
                 <form action="{{ route('admin.history.index') }}" method="GET" class="relative w-full md:w-1/3">
                     <input type="text" name="search" placeholder="Cari Nama atau NIM..." value="{{ $search ?? '' }}" class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
@@ -48,6 +67,7 @@
                         <tr>
                             <th class="p-4 font-semibold">Nama Peminjam</th>
                             <th class="p-4 font-semibold">NIM</th>
+                            <th class="p-4 font-semibold">Dosen Pengampu</th>
                             <th class="p-4 font-semibold">Tanggal Pinjam</th>
                             <th class="p-4 font-semibold">Tanggal Kembali</th>
                             <th class="p-4 font-semibold text-center">Status Pengembalian</th>
@@ -59,6 +79,14 @@
                             <tr>
                                 <td class="p-4 text-gray-800 font-medium">{{ $history->user->nama }}</td>
                                 <td class="p-4 text-gray-500">{{ $history->user->nim }}</td>
+                                <td class="p-4 text-gray-500">
+                                    @if($history->dosenPengampu)
+                                        <div class="font-medium text-gray-900">{{ $history->dosenPengampu->nama }}</div>
+                                        <div class="text-xs text-gray-500">{{ $history->dosenPengampu->mata_kuliah ?? '-' }}</div>
+                                    @else
+                                        <span class="text-gray-400 italic">-</span>
+                                    @endif
+                                </td>
                                 <td class="p-4 text-gray-500">{{ \Carbon\Carbon::parse($history->tanggal_pinjam)->format('d M Y') }}</td>
                                 <td class="p-4 text-gray-500">{{ \Carbon\Carbon::parse($history->tanggal_kembali)->format('d M Y') }}</td>
                                 <td class="p-4 text-center">
@@ -82,7 +110,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="p-4 text-center text-gray-500">
+                            <tr><td colspan="7" class="p-4 text-center text-gray-500">
                                 @if ($search)
                                     Tidak ada riwayat yang cocok dengan pencarian Anda.
                                 @else
@@ -134,13 +162,19 @@
                                     <tr>
                                         <th class="px-4 py-2 text-left font-semibold text-gray-600">Nama Barang</th>
                                         <th class="px-4 py-2 text-center font-semibold text-gray-600">Jumlah</th>
+                                        <th class="px-4 py-2 text-center font-semibold text-gray-600">Detail Units</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <template x-for="item in previewItem.detail_peminjamans" :key="item.id">
+                                    <template x-for="item in previewItem.detail_peminjaman" :key="item.id">
                                         <tr class="border-t">
                                             <td class="px-4 py-2 text-gray-800" x-text="item.barang.nama_barang"></td>
                                             <td class="px-4 py-2 text-center text-gray-600" x-text="(item.jumlah + item.jumlah_hilang) + ' pcs'"></td>
+                                            <td class="px-4 py-2 text-center">
+                                                <button @click="openUnitsModal(item)" class="px-3 py-1 text-xs font-medium text-white bg-purple-500 rounded hover:bg-purple-600">
+                                                    View Units
+                                                </button>
+                                            </td>
                                         </tr>
                                     </template>
                                 </tbody>
@@ -148,31 +182,6 @@
                         </div>
                     </div>
 
-                    {{-- Barang Hilang (hanya tampil jika ada) --}}
-                    <template x-if="previewItem.detail_peminjamans.some(item => item.jumlah_hilang > 0)">
-                         <div>
-                            <h4 class="font-semibold text-md mb-2 text-red-600">Barang Hilang</h4>
-                            <div class="border border-red-200 rounded-lg overflow-hidden">
-                                <table class="w-full text-sm">
-                                    <thead class="bg-red-50">
-                                        <tr>
-                                            <th class="px-4 py-2 text-left font-semibold text-red-700">Nama Barang</th>
-                                            <th class="px-4 py-2 text-center font-semibold text-red-700">Jumlah Hilang</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <template x-for="item in previewItem.detail_peminjamans.filter(i => i.jumlah_hilang > 0)" :key="item.id">
-                                            <tr class="border-t border-red-200">
-                                                <td class="px-4 py-2 text-red-800" x-text="item.barang.nama_barang"></td>
-                                                <td class="px-4 py-2 text-center text-red-800" x-text="item.jumlah_hilang + ' pcs'"></td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
-                            </div>
-                         </div>
-                    </template>
-                    
                     {{-- Deskripsi Kehilangan (hanya tampil jika ada) --}}
                     <template x-if="previewItem.history && previewItem.history.deskripsi_kehilangan">
                         <div>
@@ -188,6 +197,110 @@
                             </div>
                         </div>
                     </template>
+                </div>
+            </div>
+        </div>
+
+        {{-- Modal Nested untuk Detail Units --}}
+        <div x-show="isUnitsModalOpen" @keydown.escape.window="isUnitsModalOpen = false" class="fixed inset-0 z-[60] overflow-y-auto" style="display: none;">
+            <div class="flex items-center justify-center min-h-screen px-4 text-center">
+                <div @click="isUnitsModalOpen = false" x-show="isUnitsModalOpen" class="fixed inset-0 transition-opacity bg-gray-900 bg-opacity-60"></div>
+
+                <div x-show="isUnitsModalOpen" class="inline-block w-full max-w-3xl p-6 my-8 overflow-hidden text-left transition-all transform bg-white rounded-lg shadow-xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold text-gray-800">
+                            Detail Units - <span x-text="selectedItem?.barang?.nama_barang"></span>
+                        </h2>
+                        <button @click="isUnitsModalOpen = false" class="text-gray-600 hover:text-gray-800">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="mb-4 p-3 bg-gray-50 rounded">
+                        <div class="grid grid-cols-3 gap-2 text-sm">
+                            <div>
+                                <p class="text-gray-600">Total Unit</p>
+                                <p class="text-lg font-bold" x-text="selectedItem?.jumlah + selectedItem?.jumlah_hilang"></p>
+                            </div>
+                            <div>
+                                <p class="text-gray-600">Dikembalikan Baik</p>
+                                <p class="text-lg font-bold text-green-600" x-text="getUnitsByStatus('dikembalikan')"></p>
+                            </div>
+                            <div>
+                                <p class="text-gray-600">Rusak/Hilang</p>
+                                <p class="text-lg font-bold text-red-600" x-text="getUnitsByStatus('rusak') + getUnitsByStatus('hilang')"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border rounded-lg overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left font-semibold">No</th>
+                                    <th class="px-4 py-2 text-left font-semibold">Kode Unit</th>
+                                    <th class="px-4 py-2 text-left font-semibold">Status</th>
+                                    <th class="px-4 py-2 text-left font-semibold">Keterangan</th>
+                                    <th class="px-4 py-2 text-center font-semibold">Foto</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                <template x-for="(unit, index) in selectedItem?.peminjaman_units" :key="unit.id">
+                                    <tr>
+                                        <td class="px-4 py-3" x-text="index + 1"></td>
+                                        <td class="px-4 py-3 font-mono text-xs" x-text="unit.barang_unit.unit_code"></td>
+                                        <td class="px-4 py-3">
+                                            <span class="px-2 py-1 text-xs rounded-full font-semibold"
+                                                  :class="{
+                                                      'bg-green-100 text-green-700': unit.status_pengembalian === 'dikembalikan',
+                                                      'bg-yellow-100 text-yellow-700': unit.status_pengembalian === 'rusak',
+                                                      'bg-red-100 text-red-700': unit.status_pengembalian === 'hilang'
+                                                  }"
+                                                  x-text="unit.status_pengembalian.charAt(0).toUpperCase() + unit.status_pengembalian.slice(1)">
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3 text-xs" x-text="unit.keterangan_kondisi || '-'"></td>
+                                        <td class="px-4 py-3 text-center">
+                                            <template x-if="unit.foto_kondisi">
+                                                <button @click="showPhotoModal(unit.foto_kondisi)" class="text-blue-600 hover:text-blue-800 text-xs underline">
+                                                    Lihat Foto
+                                                </button>
+                                            </template>
+                                            <template x-if="!unit.foto_kondisi">
+                                                <span class="text-gray-400 text-xs">-</span>
+                                            </template>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-6 flex justify-end">
+                        <button @click="isUnitsModalOpen = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
+                            Tutup
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Modal untuk Preview Foto --}}
+        <div x-show="isPhotoModalOpen" @keydown.escape.window="isPhotoModalOpen = false" class="fixed inset-0 z-[70] overflow-y-auto" style="display: none;">
+            <div class="flex items-center justify-center min-h-screen px-4 text-center">
+                <div @click="isPhotoModalOpen = false" x-show="isPhotoModalOpen" class="fixed inset-0 transition-opacity bg-black bg-opacity-75"></div>
+
+                <div x-show="isPhotoModalOpen" class="inline-block max-w-4xl p-4 my-8 overflow-hidden transition-all transform bg-white rounded-lg shadow-xl">
+                    <div class="flex justify-end mb-2">
+                        <button @click="isPhotoModalOpen = false" class="text-gray-600 hover:text-gray-800">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <img :src="`/storage/${selectedPhoto}`" class="w-full h-auto rounded" alt="Foto Kondisi Unit">
                 </div>
             </div>
         </div>

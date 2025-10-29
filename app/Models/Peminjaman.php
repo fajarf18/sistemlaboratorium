@@ -11,6 +11,7 @@ class Peminjaman extends Model
     protected $table = 'peminjamans';
     protected $fillable = [
         'user_id',
+        'dosen_pengampu_id',
         'tanggal_pinjam',
         'tanggal_wajib_kembali',
         'tanggal_kembali',
@@ -38,6 +39,14 @@ class Peminjaman extends Model
     public function history()
     {
         return $this->hasOne(HistoryPeminjaman::class);
+    }
+
+    /**
+     * Relasi ke dosen pengampu
+     */
+    public function dosenPengampu()
+    {
+        return $this->belongsTo(DosenPengampu::class);
     }
 }
 

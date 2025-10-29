@@ -6,17 +6,19 @@
     </x-slot>
 
     {{-- Logika Alpine.js untuk mengelola state modal --}}
-    <div x-data="{ 
-            showAddModal: @if($errors->any() && old('form_type') === 'add') true @else false @endif, 
+    <div x-data="{
+            showAddModal: @if($errors->any() && old('form_type') === 'add') true @else false @endif,
             showEditModal: @if($errors->any() && old('form_type') === 'edit') true @else false @endif,
-            showDeleteModal: false, 
+            showDeleteModal: false,
             showPreviewModal: false,
+            showImportModal: @if($errors->has('file') || session('import_errors')) true @else false @endif,
             editItem: @if($errors->any() && old('form_type') === 'edit') {{ json_encode(old()) }} @else {} @endif,
             previewItem: {},
-            itemToDelete: '', 
+            itemToDelete: '',
             deleteAction: '',
             addPreviewUrl: null,
             editPreviewUrl: null,
+            importFileName: '',
             handleFileChange(event, type) {
                 const file = event.target.files[0];
                 if (file) {
@@ -28,6 +30,12 @@
                     reader.readAsDataURL(file);
                 }
             },
+            handleImportFileChange(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    this.importFileName = file.name;
+                }
+            },
             resetAddModal() {
                 this.showAddModal = false;
                 this.addPreviewUrl = null;
@@ -36,9 +44,15 @@
             resetEditModal() {
                 this.showEditModal = false;
                 this.editPreviewUrl = null;
+            },
+            resetImportModal() {
+                this.showImportModal = false;
+                this.importFileName = '';
+                const fileInput = document.getElementById('import_file');
+                if (fileInput) fileInput.value = '';
             }
-         }" 
-         @keydown.escape.window="resetAddModal(); resetEditModal(); showDeleteModal = false; showPreviewModal = false">
+         }"
+         @keydown.escape.window="resetAddModal(); resetEditModal(); showDeleteModal = false; showPreviewModal = false; resetImportModal()">
         
         {{-- Notifikasi --}}
         @if (session('success'))
@@ -57,20 +71,34 @@
                 </ul>
             </div>
         @endif
+        @if (session('import_errors'))
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
+                <p class="font-bold">Error Import:</p>
+                <ul class="mt-2 list-disc list-inside text-sm">
+                    @foreach (session('import_errors') as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
         <div class="bg-white p-6 rounded-xl shadow-sm">
             {{-- Header Aksi, Filter, dan Pencarian (RESPONSIF & STABIL) --}}
             <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
                 
                 {{-- Tombol Aksi (Kiri di Desktop, Atas di Mobile) --}}
-                <div class="flex items-center gap-2 w-full md:w-auto">
+                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
                     <button @click="showAddModal = true" class="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-sm font-semibold text-white rounded-lg hover:bg-blue-700">
                         <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                         Tambah
                     </button>
+                    <button @click="showImportModal = true" class="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-sm font-semibold text-white rounded-lg hover:bg-green-700">
+                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
+                        Import
+                    </button>
                     <a href="{{ route('admin.barang.download') }}" class="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-sm font-semibold text-gray-700 rounded-lg hover:bg-gray-50">
                         <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
-                        Download
+                        Export
                     </a>
                 </div>
 
@@ -119,6 +147,9 @@
                                 <td class="p-4 text-gray-500">{{ $barang->stok }} pcs</td>
                                 <td class="p-4">
                                     <div class="flex gap-2">
+                                        <a href="{{ route('admin.barang.units.index', $barang) }}" class="p-2 bg-purple-600 text-white rounded-md hover:bg-purple-700" title="Lihat Units">
+                                            <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
+                                        </a>
                                         <button @click="showPreviewModal = true; previewItem = {{ json_encode($barang) }}" class="p-2 bg-yellow-400 text-white rounded-md hover:bg-yellow-500" title="Lihat Detail">
                                             <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639l4.43-4.43a1.012 1.012 0 011.43 0l4.43 4.43a1.012 1.012 0 010 1.43l-4.43 4.43a1.012 1.012 0 01-1.43 0l-4.43-4.43zM12.036 12.322a1.012 1.012 0 010-.639l4.43-4.43a1.012 1.012 0 011.43 0l4.43 4.43a1.012 1.012 0 010 1.43l-4.43 4.43a1.012 1.012 0 01-1.43 0l-4.43-4.43z" /></svg>
                                         </button>
@@ -302,6 +333,95 @@
                     @method('DELETE')
                     <button type="button" @click="showDeleteModal = false" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Batal</button>
                     <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Ya, Hapus</button>
+                </form>
+            </div>
+        </div>
+
+        {{-- Modal untuk Import --}}
+        <div x-show="showImportModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
+            <div @click.away="showImportModal = false" class="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center pb-3 border-b">
+                    <h3 class="text-lg font-semibold">Import Data Barang</h3>
+                    <button @click="showImportModal = false" class="text-gray-400 hover:text-gray-600">
+                        <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+
+                {{-- Instruksi --}}
+                <div class="mt-4 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                    <div class="flex items-start">
+                        <svg class="h-5 w-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
+                        <div class="text-sm text-blue-800">
+                            <p class="font-semibold">Panduan Import:</p>
+                            <ul class="mt-2 list-disc list-inside space-y-1">
+                                <li>Download template Excel terlebih dahulu</li>
+                                <li>Isi data sesuai format yang ada di template</li>
+                                <li>Jangan ubah/hapus header kolom</li>
+                                <li>Kolom bertanda * wajib diisi</li>
+                                <li>Tipe harus: "Habis Pakai" atau "Tidak Habis Pakai"</li>
+                                <li>File maksimal 2MB (format .xlsx atau .xls)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Button Download Template --}}
+                <div class="mt-4 flex justify-center">
+                    <a href="{{ route('admin.barang.downloadTemplate') }}" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-purple-800 shadow-lg">
+                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                        Download Template Excel
+                    </a>
+                </div>
+
+                <div class="my-6 border-t border-gray-200"></div>
+
+                {{-- Form Upload --}}
+                <form action="{{ route('admin.barang.import') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                    @csrf
+                    <div>
+                        <label for="import_file" class="block text-sm font-medium text-gray-700 mb-2">
+                            Upload File Excel <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1">
+                            <div x-show="!importFileName" class="flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-green-500 transition">
+                                <div class="space-y-1 text-center">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                                    <div class="flex text-sm text-gray-600 justify-center">
+                                        <label for="import_file" class="relative cursor-pointer bg-white rounded-md font-medium text-green-600 hover:text-green-500 focus-within:outline-none">
+                                            <span>Pilih file Excel</span>
+                                            <input id="import_file" name="file" type="file" accept=".xlsx,.xls" class="hidden" required @change="handleImportFileChange($event)">
+                                        </label>
+                                    </div>
+                                    <p class="text-xs text-gray-500">XLSX atau XLS maksimal 2MB</p>
+                                </div>
+                            </div>
+
+                            {{-- Preview File Terpilih --}}
+                            <div x-show="importFileName" class="flex items-center justify-between px-4 py-3 border-2 border-green-500 bg-green-50 rounded-lg" style="display: none;">
+                                <div class="flex items-center gap-3">
+                                    <svg class="h-8 w-8 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+                                    <div>
+                                        <p class="text-sm font-semibold text-gray-800" x-text="importFileName"></p>
+                                        <p class="text-xs text-gray-600">File siap untuk diimport</p>
+                                    </div>
+                                </div>
+                                <button type="button" @click="importFileName = ''; document.getElementById('import_file').value = ''" class="text-red-600 hover:text-red-800">
+                                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
+                            </div>
+                        </div>
+                        @error('file')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="flex justify-end gap-4 pt-4">
+                        <button type="button" @click="resetImportModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Batal</button>
+                        <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2" :disabled="!importFileName" :class="{'opacity-50 cursor-not-allowed': !importFileName}">
+                            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
+                            Import Data
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>

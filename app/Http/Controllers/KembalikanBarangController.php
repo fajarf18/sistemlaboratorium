@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BarangUnit;
 use App\Models\DetailPeminjaman;
 use App\Models\Peminjaman;
+use App\Models\PeminjamanUnit;
 use App\Models\HistoryPeminjaman;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,7 +18,7 @@ class KembalikanBarangController extends Controller
 {
     public function index(Request $request)
     {
-        $query = DetailPeminjaman::with(['barang', 'peminjaman'])
+        $query = DetailPeminjaman::with(['barang', 'peminjaman', 'peminjamanUnits.barangUnit'])
             ->whereHas('peminjaman', function ($q) {
                 $q->where('user_id', Auth::id())
                   ->where('status', 'Dipinjam');
@@ -28,68 +30,87 @@ class KembalikanBarangController extends Controller
                 $q->where('nama_barang', 'like', '%' . $searchTerm . '%');
             });
         }
-        
+
         $detailPeminjamans = $query->get();
         return view('user.kembalikan-barang', compact('detailPeminjamans'));
     }
 
     public function konfirmasi(Request $request)
     {
-        $items = json_decode($request->items, true);
-        $adaBarangHilang = false;
-        foreach ($items as $itemData) {
-            if ((int)$itemData['jumlahDikembalikan'] < (int)$itemData['jumlah']) {
-                $adaBarangHilang = true;
-                break;
-            }
-        }
-
         $request->validate([
             'tanggal_kembali' => 'required|date',
-            // Nama input di form adalah 'gambar_bukti'
             'gambar_bukti' => 'nullable|image|max:2048',
-            'items' => 'required|json',
-            'deskripsi_kehilangan' => $adaBarangHilang ? 'required|string' : 'nullable|string',
+            'unit_statuses' => 'required|json',
         ]);
+
+        $unitStatuses = json_decode($request->unit_statuses, true);
+
+        // Validasi format unit statuses
+        if (!is_array($unitStatuses) || empty($unitStatuses)) {
+            return back()->with('error', 'Data status unit tidak valid. Harap pilih status untuk semua unit.');
+        }
+
+        // Validasi setiap status unit
+        foreach ($unitStatuses as $unitId => $statusData) {
+            if (!isset($statusData['status']) || !in_array($statusData['status'], ['dikembalikan', 'rusak', 'hilang'])) {
+                return back()->with('error', 'Status unit tidak valid untuk unit ID: ' . $unitId);
+            }
+
+            // Jika rusak atau hilang, keterangan wajib diisi
+            if (in_array($statusData['status'], ['rusak', 'hilang'])) {
+                if (empty($statusData['keterangan'])) {
+                    return back()->with('error', 'Keterangan wajib diisi untuk unit yang rusak atau hilang.');
+                }
+            }
+        }
 
         $userId = Auth::id();
         $isTerlambat = false;
         $peminjamanUntukNotifikasi = null;
         $peminjamanIdsToUpdate = [];
+        $adaBarangRusakHilang = false;
 
         DB::beginTransaction();
         try {
-            // ================= PERBAIKAN LOGIKA GAMBAR =================
-            // 1. Proses dan simpan gambar terlebih dahulu jika ada.
+            // Proses gambar bukti pengembalian jika ada
             $imagePath = null;
             if ($request->hasFile('gambar_bukti')) {
-                // Simpan file di 'storage/app/public/bukti_pengembalian'
                 $imagePath = $request->file('gambar_bukti')->store('bukti_pengembalian', 'public');
             }
-            // ==========================================================
 
-            foreach ($items as $itemData) {
-                $detail = DetailPeminjaman::with('peminjaman', 'barang')
-                    ->where('id', $itemData['id'])
-                    ->whereHas('peminjaman', function ($q) use ($userId) {
+            // Update status setiap unit yang dipinjam
+            foreach ($unitStatuses as $unitId => $statusData) {
+                $peminjamanUnit = PeminjamanUnit::with('detailPeminjaman.peminjaman', 'barangUnit')
+                    ->where('id', $unitId)
+                    ->whereHas('detailPeminjaman.peminjaman', function ($q) use ($userId) {
                         $q->where('user_id', $userId)->where('status', 'Dipinjam');
                     })->firstOrFail();
 
                 if (!$peminjamanUntukNotifikasi) {
-                    $peminjamanUntukNotifikasi = $detail->peminjaman;
+                    $peminjamanUntukNotifikasi = $peminjamanUnit->detailPeminjaman->peminjaman;
                 }
-                
-                $peminjamanIdsToUpdate[] = $detail->peminjaman_id;
-                
-                $jumlahDipinjam = (int)$itemData['jumlah'];
-                $jumlahDikembalikan = (int)$itemData['jumlahDikembalikan'];
 
-                if ($jumlahDikembalikan < $jumlahDipinjam) {
-                    $jumlahHilang = $jumlahDipinjam - $jumlahDikembalikan;
-                    $detail->jumlah = $jumlahDikembalikan;
-                    $detail->jumlah_hilang = ($detail->jumlah_hilang ?? 0) + $jumlahHilang; 
-                    $detail->save();
+                $peminjamanIdsToUpdate[] = $peminjamanUnit->detailPeminjaman->peminjaman_id;
+
+                // Update status pengembalian unit
+                $peminjamanUnit->status_pengembalian = $statusData['status'];
+
+                // Jika rusak atau hilang, simpan foto dan keterangan
+                if (in_array($statusData['status'], ['rusak', 'hilang'])) {
+                    $adaBarangRusakHilang = true;
+                    $peminjamanUnit->keterangan_kondisi = $statusData['keterangan'] ?? null;
+
+                    // Upload foto kondisi jika ada
+                    if (isset($statusData['foto']) && $statusData['foto']) {
+                        // Handle base64 image from frontend
+                        $fotoPath = $this->saveBase64Image($statusData['foto'], 'kondisi_unit');
+                        $peminjamanUnit->foto_kondisi = $fotoPath;
+                    }
                 }
+                // CATATAN: Status unit barang di master data TIDAK diupdate di sini
+                // Status unit akan diupdate oleh admin saat menerima/menolak pengembalian
+
+                $peminjamanUnit->save();
             }
             
             if (!empty($peminjamanIdsToUpdate)) {
@@ -108,22 +129,22 @@ class KembalikanBarangController extends Controller
             }
 
             $statusPengembalian = 'Aman';
-            if ($adaBarangHilang && $isTerlambat) {
-                $statusPengembalian = 'Hilang dan Terlambat';
-            } elseif ($adaBarangHilang) {
-                $statusPengembalian = 'Hilang';
+            if ($adaBarangRusakHilang && $isTerlambat) {
+                $statusPengembalian = 'Rusak/Hilang dan Terlambat';
+            } elseif ($adaBarangRusakHilang) {
+                $statusPengembalian = 'Rusak/Hilang';
             } elseif ($isTerlambat) {
                 $statusPengembalian = 'Terlambat';
             }
 
-            // 2. Buat history record dengan path gambar yang sudah diproses.
+            // Buat history record
             HistoryPeminjaman::create([
                 'peminjaman_id' => $peminjamanUntukNotifikasi->id,
                 'user_id' => $userId,
                 'tanggal_kembali' => $request->tanggal_kembali,
                 'status_pengembalian' => $statusPengembalian,
-                'deskripsi_kehilangan' => $adaBarangHilang ? $request->deskripsi_kehilangan : null,
-                'gambar_bukti' => $imagePath, // Gunakan variabel path yang sudah disiapkan
+                'deskripsi_kehilangan' => $adaBarangRusakHilang ? 'Ada unit rusak/hilang, lihat detail unit' : null,
+                'gambar_bukti' => $imagePath,
             ]);
 
             DB::commit();
@@ -173,5 +194,33 @@ class KembalikanBarangController extends Controller
         
         // Pastikan nama rute ini benar, sepertinya yang benar adalah 'user.history.index'
         return redirect()->route('history-peminjaman.index')->with('success', 'Pengajuan pengembalian barang berhasil, tunggu konfirmasi dari admin.');
+    }
+
+    /**
+     * Save base64 encoded image to storage
+     */
+    private function saveBase64Image($base64String, $folder)
+    {
+        // Check if string contains base64 prefix
+        if (preg_match('/^data:image\/(\w+);base64,/', $base64String, $type)) {
+            $base64String = substr($base64String, strpos($base64String, ',') + 1);
+            $type = strtolower($type[1]); // jpg, png, gif
+
+            $base64String = str_replace(' ', '+', $base64String);
+            $imageData = base64_decode($base64String);
+
+            if ($imageData === false) {
+                throw new \Exception('Base64 decode failed');
+            }
+
+            $fileName = uniqid() . '.' . $type;
+            $filePath = $folder . '/' . $fileName;
+
+            \Storage::disk('public')->put($filePath, $imageData);
+
+            return $filePath;
+        }
+
+        throw new \Exception('Invalid base64 image format');
     }
 }

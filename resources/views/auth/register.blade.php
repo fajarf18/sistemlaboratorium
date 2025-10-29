@@ -53,7 +53,15 @@
                         <x-text-input id="email" type="email" name="email" :value="old('email')" required placeholder="Alamat Email" class="pl-10 w-full bg-slate-50"/>
                         <x-input-error :messages="$errors->get('email')" class="mt-2" />
                     </div>
-                    
+
+                    <div class="relative">
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                            <svg class="h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2 3.5A1.5 1.5 0 013.5 2h1.148a1.5 1.5 0 011.465 1.175l.716 3.223a1.5 1.5 0 01-1.052 1.767l-.933.267c-.41.117-.643.555-.48.95a11.542 11.542 0 006.254 6.254c.395.163.833-.07.95-.48l.267-.933a1.5 1.5 0 011.767-1.052l3.223.716A1.5 1.5 0 0118 15.352V16.5a1.5 1.5 0 01-1.5 1.5H15c-1.149 0-2.263-.15-3.326-.43A13.022 13.022 0 012.43 8.326 13.019 13.019 0 012 5V3.5z" clip-rule="evenodd" /></svg>
+                        </div>
+                        <x-text-input id="nomor_wa" type="text" name="nomor_wa" :value="old('nomor_wa')" placeholder="Nomor WhatsApp (contoh: 08123456789)" class="pl-10 w-full bg-slate-50"/>
+                        <x-input-error :messages="$errors->get('nomor_wa')" class="mt-2" />
+                    </div>
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="relative">
                             <x-text-input id="prodi" type="text" name="prodi" :value="old('prodi')" required placeholder="Prodi" class="w-full bg-slate-50"/>

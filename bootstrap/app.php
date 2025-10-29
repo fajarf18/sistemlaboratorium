@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Daftarkan alias middleware di sini
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
+            'check.borrowing.status' => \App\Http\Middleware\CheckUserBorrowingStatus::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

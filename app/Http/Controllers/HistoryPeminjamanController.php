@@ -13,10 +13,9 @@ class HistoryPeminjamanController extends Controller
      */
     public function index()
     {
-        // Ambil semua data peminjaman milik user yang sedang login.
-        // `with('history')` bisa ditambahkan jika Anda ingin menampilkan status terakhir dari tabel history.
-        // `latest('tanggal_pinjam')` untuk mengurutkan dari yang paling baru.
-        $historyPeminjamans = Peminjaman::where('user_id', Auth::id())
+        // Ambil semua data peminjaman milik user yang sedang login dengan relasi history
+        $historyPeminjamans = Peminjaman::with('history', 'dosenPengampu')
+            ->where('user_id', Auth::id())
             ->latest('tanggal_pinjam')
             ->get();
 
@@ -34,11 +33,13 @@ class HistoryPeminjamanController extends Controller
     public function show($id)
     {
         // Cari data peminjaman berdasarkan ID dan pastikan milik user yang login.
-        // `with('detailPeminjamans.barang')` sangat penting.
-        // Ini akan mengambil semua detail item yang terkait dengan peminjaman ini,
-        // beserta data master barangnya (seperti nama_barang).
-        // Kolom 'jumlah' dan 'jumlah_hilang' sudah otomatis termasuk di dalam 'detailPeminjamans'.
-        $peminjaman = Peminjaman::with('detailPeminjamans.barang')
+        // Load semua relasi yang dibutuhkan termasuk unit-unit individual
+        $peminjaman = Peminjaman::with([
+            'dosenPengampu',
+            'detailPeminjaman.barang',
+            'detailPeminjaman.peminjamanUnits.barangUnit',
+            'history'
+        ])
             ->where('id', $id)
             ->where('user_id', Auth::id())
             ->firstOrFail();

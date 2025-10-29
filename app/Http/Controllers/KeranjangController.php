@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Barang;
+use App\Models\BarangUnit;
 use App\Models\Keranjang;
 use App\Models\Peminjaman;
 use App\Models\DetailPeminjaman;
+use App\Models\PeminjamanUnit;
+use App\Models\DosenPengampu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -22,8 +25,11 @@ class KeranjangController extends Controller
         $keranjangItems = Keranjang::with('barang')
             ->where('user_id', Auth::id())
             ->get();
-            
-        return view('user.keranjang', compact('keranjangItems'));
+
+        // Ambil dosen pengampu yang aktif
+        $dosens = DosenPengampu::where('is_active', true)->get();
+
+        return view('user.keranjang', compact('keranjangItems', 'dosens'));
     }
 
     /**
@@ -39,8 +45,11 @@ class KeranjangController extends Controller
         $barang = Barang::findOrFail($request->barang_id);
         $userId = Auth::id();
 
-        if ($request->jumlah > $barang->stok) {
-            return back()->with('error', 'Jumlah peminjaman melebihi stok yang tersedia.');
+        // Cek stok yang available (hanya yang baik)
+        $stokTersedia = $barang->stok_baik;
+
+        if ($request->jumlah > $stokTersedia) {
+            return back()->with('error', 'Jumlah peminjaman melebihi stok barang yang tersedia. Stok baik: ' . $stokTersedia);
         }
 
         $keranjangItem = Keranjang::where('user_id', $userId)
@@ -97,6 +106,10 @@ class KeranjangController extends Controller
     {
         $request->validate([
             'items' => 'required|json',
+            'dosen_pengampu_id' => 'required|exists:dosen_pengampus,id',
+        ], [
+            'dosen_pengampu_id.required' => 'Silakan pilih dosen pengampu terlebih dahulu.',
+            'dosen_pengampu_id.exists' => 'Dosen pengampu yang dipilih tidak valid.',
         ]);
 
         $selectedItemIds = json_decode($request->items);
@@ -112,29 +125,44 @@ class KeranjangController extends Controller
 
         DB::beginTransaction();
         try {
+            // Validasi stok baik tersedia untuk semua item
             foreach ($itemsInCart as $item) {
-                if ($item->jumlah > $item->barang->stok) {
-                    throw new \Exception('Stok untuk barang "' . $item->barang->nama_barang . '" tidak mencukupi.');
+                $stokBaikTersedia = $item->barang->stok_baik;
+                if ($item->jumlah > $stokBaikTersedia) {
+                    throw new \Exception('Stok baik untuk barang "' . $item->barang->nama_barang . '" tidak mencukupi. Tersedia: ' . $stokBaikTersedia);
                 }
             }
 
             $peminjaman = Peminjaman::create([
                 'user_id' => Auth::id(),
+                'dosen_pengampu_id' => $request->dosen_pengampu_id,
                 'tanggal_pinjam' => now(),
                 'tanggal_wajib_kembali' => now()->addDays(3),
-                // --- PERUBAHAN DI SINI ---
-                // Menggunakan nilai status yang sesuai dengan ENUM baru Anda
                 'status' => 'Menunggu Konfirmasi',
             ]);
 
             foreach ($itemsInCart as $item) {
-                DetailPeminjaman::create([
+                $detailPeminjaman = DetailPeminjaman::create([
                     'peminjaman_id' => $peminjaman->id,
                     'barang_id' => $item->barang_id,
                     'jumlah' => $item->jumlah,
                 ]);
 
-                // Mengurangi stok barang
+                // Assign unit-unit baik yang tersedia
+                $availableUnits = BarangUnit::where('barang_id', $item->barang_id)
+                    ->where('status', 'baik')
+                    ->limit($item->jumlah)
+                    ->get();
+
+                foreach ($availableUnits as $unit) {
+                    PeminjamanUnit::create([
+                        'detail_peminjaman_id' => $detailPeminjaman->id,
+                        'barang_unit_id' => $unit->id,
+                        'status_pengembalian' => 'belum',
+                    ]);
+                }
+
+                // Mengurangi stok barang (total stok)
                 $item->barang->decrement('stok', $item->jumlah);
 
                 // Hapus item dari keranjang

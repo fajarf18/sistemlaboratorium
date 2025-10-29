@@ -1,6 +1,6 @@
 <?php
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\PinjamBarangController; 
+use App\Http\Controllers\PinjamBarangController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\KeranjangController;
@@ -10,6 +10,7 @@ use App\Http\Controllers\HistoryPeminjamanController;
 use App\Http\Controllers\UserDashboardController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\BarangController;
+use App\Http\Controllers\Admin\BarangUnitController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\KonfirmasiController;
 use App\Http\Controllers\Admin\HistoryController;
@@ -55,12 +56,29 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     
     // Rute kustom untuk download harus didefinisikan SEBELUM resource controller
     Route::get('barang/download', [BarangController::class, 'download'])->name('barang.download');
-    
+    Route::get('barang/download-template', [BarangController::class, 'downloadTemplate'])->name('barang.downloadTemplate');
+    Route::post('barang/import', [BarangController::class, 'import'])->name('barang.import');
+
     // Resource controller untuk menangani semua aksi CRUD standar.
     // Kita batasi hanya untuk metode yang ada di controller Anda untuk menghindari error.
     Route::resource('barang', BarangController::class)->only([
         'index', 'store', 'update', 'destroy'
     ]);
+
+    // Rute untuk manajemen unit barang
+    Route::get('barang/{barang}/units', [BarangUnitController::class, 'index'])->name('barang.units.index');
+    Route::post('barang/{barang}/units', [BarangUnitController::class, 'store'])->name('barang.units.store');
+    Route::put('barang-units/{unit}', [BarangUnitController::class, 'update'])->name('barang.units.update');
+    Route::delete('barang-units/{unit}', [BarangUnitController::class, 'destroy'])->name('barang.units.destroy');
+
+    // Rute untuk manajemen modul
+    Route::resource('modul', App\Http\Controllers\Admin\ModulController::class);
+
+    // Rute untuk manajemen dosen pengampu
+    Route::resource('dosen-pengampu', App\Http\Controllers\Admin\DosenPengampuController::class)->only([
+        'index', 'store', 'update', 'destroy'
+    ]);
+
     //Pengaturan pengguna
     Route::get('users/download', [UserController::class, 'download'])->name('users.download');
     Route::resource('users', UserController::class)->only(['index', 'update', 'destroy']);
@@ -76,6 +94,8 @@ Route::get('/konfirmasi', [KonfirmasiController::class, 'index'])->name('konfirm
     Route::get('history/download', [HistoryController::class, 'download'])->name('history.download');
     Route::resource('history', HistoryController::class)->only(['index', 'show', 'destroy']);
     Route::get('/status-peminjam', [App\Http\Controllers\Admin\StatusPeminjamController::class, 'index'])->name('status.index');
+    Route::post('/status-peminjam/{id}/selesaikan', [App\Http\Controllers\Admin\StatusPeminjamController::class, 'selesaikan'])->name('status.selesaikan');
+    Route::post('/status-peminjam/{id}/batalkan', [App\Http\Controllers\Admin\StatusPeminjamController::class, 'batalkan'])->name('status.batalkan');
 });
 
 
@@ -86,29 +106,28 @@ Route::get('/konfirmasi', [KonfirmasiController::class, 'index'])->name('konfirm
 // Grup rute khusus User (Mahasiswa)
 Route::middleware('auth')->prefix('user')->name('user.')->group(function () {
     Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('dashboard');
-   Route::get('/pinjam-barang', [PinjamBarangController::class, 'index'])->name('pinjam.index');
-    Route::get('/keranjang', [KeranjangController::class, 'index'])->name('keranjang.index');
-    Route::post('/keranjang', [KeranjangController::class, 'store'])->name('keranjang.store');
-    Route::patch('/keranjang/{id}', [KeranjangController::class, 'update'])->name('keranjang.update');
-    Route::delete('/keranjang/{id}', [KeranjangController::class, 'destroy'])->name('keranjang.destroy');
-     Route::post('/checkout', function(Illuminate\Http\Request $request) {
-        // Logika untuk memproses checkout akan ada di sini.
-        // Anda bisa melihat item yang dipilih dengan:
-        $selectedItems = json_decode($request->items);
-        dd($selectedItems);
-        return 'Proses checkout untuk item: ' . $request->items;
-    })->name('checkout.process');
-    Route::post('/checkout', [KeranjangController::class, 'checkout'])->name('checkout.process');
-     Route::get('/rincian-pinjaman', [RincianPinjamanController::class, 'index'])->name('peminjaman.rincian');
-     Route::get('/kembalikan-barang', [KembalikanBarangController::class, 'index'])->name('kembalikan.index');
-         Route::get('/kembalikan-barang', [KembalikanBarangController::class, 'index'])->name('kembalikan.index');
-    // RUTE BARU
+
+    // Rute yang memerlukan pengecekan status peminjaman (tidak boleh ada peminjaman aktif)
+    Route::middleware('check.borrowing.status')->group(function () {
+        Route::get('/pinjam-barang', [PinjamBarangController::class, 'index'])->name('pinjam.index');
+        Route::get('/keranjang', [KeranjangController::class, 'index'])->name('keranjang.index');
+        Route::post('/keranjang', [KeranjangController::class, 'store'])->name('keranjang.store');
+        Route::patch('/keranjang/{id}', [KeranjangController::class, 'update'])->name('keranjang.update');
+        Route::delete('/keranjang/{id}', [KeranjangController::class, 'destroy'])->name('keranjang.destroy');
+        Route::post('/checkout', [KeranjangController::class, 'checkout'])->name('checkout.process');
+
+        // Rute untuk modul praktikum
+        Route::get('/modul', [App\Http\Controllers\ModulController::class, 'index'])->name('modul.index');
+        Route::post('/modul/{id}/add-to-cart', [App\Http\Controllers\ModulController::class, 'addToCart'])->name('modul.addToCart');
+    });
+
+    Route::get('/rincian-pinjaman', [RincianPinjamanController::class, 'index'])->name('peminjaman.rincian');
+    Route::get('/kembalikan-barang', [KembalikanBarangController::class, 'index'])->name('kembalikan.index');
     Route::post('/kembalikan-barang/konfirmasi', [KembalikanBarangController::class, 'konfirmasi'])->name('kembalikan.konfirmasi');
-        Route::get('/history-peminjaman', [HistoryPeminjamanController::class, 'index'])->name('history.index');
-        Route::get('/history-peminjaman/detail/{id}', [HistoryPeminjamanController::class, 'show'])->name('history.show');
+    Route::get('/history-peminjaman', [HistoryPeminjamanController::class, 'index'])->name('history.index');
+    Route::get('/history-peminjaman/detail/{id}', [HistoryPeminjamanController::class, 'show'])->name('history.show');
     Route::get('verify-otp', [OtpController::class, 'showOtpForm'])->name('otp.form');
-Route::post('verify-otp', [OtpController::class, 'verifyOtp'])->name('otp.verify');
-    // ... rute user lainnya ...
+    Route::post('verify-otp', [OtpController::class, 'verifyOtp'])->name('otp.verify');
 });
 
 // Rute profil (bawaan Breeze)

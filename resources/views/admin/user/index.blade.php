@@ -68,6 +68,7 @@
                             <th class="p-4 font-semibold">NIM</th>
                             <th class="p-4 font-semibold">Nama</th>
                             <th class="p-4 font-semibold">Email</th>
+                            <th class="p-4 font-semibold">Nomor WA</th>
                             <th class="p-4 font-semibold">Prodi</th>
                             <th class="p-4 font-semibold">Semester</th>
                             <th class="p-4 font-semibold">Aksi</th>
@@ -79,6 +80,7 @@
                                 <td class="p-4 text-gray-500">{{ $user->nim ?? '-' }}</td>
                                 <td class="p-4 text-gray-800 font-medium">{{ $user->nama }}</td>
                                 <td class="p-4 text-gray-500">{{ $user->email }}</td>
+                                <td class="p-4 text-gray-500">{{ $user->nomor_wa ?? '-' }}</td>
                                 <td class="p-4 text-gray-500">{{ $user->prodi ?? '-' }}</td>
                                 <td class="p-4 text-gray-500">{{ $user->semester ?? '-' }}</td>
                                 <td class="p-4">
@@ -96,7 +98,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="p-4 text-center text-gray-500">
+                            <tr><td colspan="7" class="p-4 text-center text-gray-500">
                                 @if ($search || $prodi || $semester)
                                     Tidak ada pengguna yang cocok dengan filter atau pencarian Anda.
                                 @else
@@ -133,6 +135,10 @@
                     <div>
                         <label for="edit_email" class="block text-sm font-medium text-gray-700">Email <span class="text-red-500">*</span></label>
                         <input type="email" name="email" id="edit_email" x-model="editItem.email" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                    </div>
+                    <div>
+                        <label for="edit_nomor_wa" class="block text-sm font-medium text-gray-700">Nomor WhatsApp</label>
+                        <input type="text" name="nomor_wa" id="edit_nomor_wa" x-model="editItem.nomor_wa" placeholder="contoh: 08123456789" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
                     </div>
                     <div>
                         <label for="edit_prodi" class="block text-sm font-medium text-gray-700">Prodi <span class="text-red-500">*</span></label>
@@ -185,6 +191,14 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Nama <span class="text-red-500">*</span></label>
                         <input type="text" :value="previewItem.nama" class="mt-1 block w-full bg-gray-100 border-gray-300 rounded-md shadow-sm" disabled>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="text" :value="previewItem.email" class="mt-1 block w-full bg-gray-100 border-gray-300 rounded-md shadow-sm" disabled>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Nomor WhatsApp</label>
+                        <input type="text" :value="previewItem.nomor_wa || '-'" class="mt-1 block w-full bg-gray-100 border-gray-300 rounded-md shadow-sm" disabled>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Semester <span class="text-red-500">*</span></label>

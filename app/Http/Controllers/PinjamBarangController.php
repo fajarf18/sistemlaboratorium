@@ -15,7 +15,6 @@ class PinjamBarangController extends Controller
         $hasActiveLoan = Peminjaman::where('user_id', Auth::id())
             ->whereIn('status', [
                 'Dipinjam', 
-                'Menunggu Konfirmasi', 
                 'Tunggu Konfirmasi Admin' // <-- TAMBAHKAN STATUS INI
             ])
             ->exists();
