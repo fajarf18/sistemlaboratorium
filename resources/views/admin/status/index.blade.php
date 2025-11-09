@@ -252,10 +252,9 @@
                                                   :class="{
                                                       'bg-blue-100 text-blue-700': unit.barang_unit?.status === 'dipinjam',
                                                       'bg-green-100 text-green-700': unit.barang_unit?.status === 'baik',
-                                                      'bg-yellow-100 text-yellow-700': unit.barang_unit?.status === 'rusak',
-                                                      'bg-red-100 text-red-700': unit.barang_unit?.status === 'hilang'
+                                                      'bg-yellow-100 text-yellow-700': unit.barang_unit?.status?.toLowerCase()?.includes('rusak')
                                                   }"
-                                                  x-text="unit.barang_unit?.status ? unit.barang_unit.status.charAt(0).toUpperCase() + unit.barang_unit.status.slice(1) : '-'">
+                                                  x-text="unit.barang_unit?.status ? unit.barang_unit.status.replaceAll('_', ' ') : '-'">
                                             </span>
                                         </td>
                                     </tr>

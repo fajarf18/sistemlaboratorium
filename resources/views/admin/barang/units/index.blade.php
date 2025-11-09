@@ -59,12 +59,12 @@
                 <p class="text-2xl font-bold text-blue-600">{{ $barang->stok_dipinjam }}</p>
             </div>
             <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-yellow-500">
-                <p class="text-gray-600 text-sm">Rusak</p>
-                <p class="text-2xl font-bold text-yellow-600">{{ $barang->stok_rusak }}</p>
+                <p class="text-gray-600 text-sm">Rusak Ringan</p>
+                <p class="text-2xl font-bold text-yellow-600">{{ $barang->stok_rusak_ringan }}</p>
             </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-red-500">
-                <p class="text-gray-600 text-sm">Hilang</p>
-                <p class="text-2xl font-bold text-red-600">{{ $barang->stok_hilang }}</p>
+            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-yellow-700">
+                <p class="text-gray-600 text-sm">Rusak Berat</p>
+                <p class="text-2xl font-bold text-yellow-800">{{ $barang->stok_rusak_berat }}</p>
             </div>
         </div>
 
@@ -87,8 +87,7 @@
                         <option value="">Semua Status</option>
                         <option value="baik" @selected(request('status') == 'baik')>Baik</option>
                         <option value="dipinjam" @selected(request('status') == 'dipinjam')>Dipinjam</option>
-                        <option value="rusak" @selected(request('status') == 'rusak')>Rusak</option>
-                        <option value="hilang" @selected(request('status') == 'hilang')>Hilang</option>
+                        <option value="rusak" @selected(request('status') == 'rusak')>Rusak (Ringan & Berat)</option>
                     </select>
 
                     <div class="relative flex-1">
@@ -123,10 +122,11 @@
                                         <span class="px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Baik</span>
                                     @elseif($unit->status == 'dipinjam')
                                         <span class="px-2 py-1 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">Dipinjam</span>
-                                    @elseif($unit->status == 'rusak')
-                                        <span class="px-2 py-1 text-xs font-semibold text-yellow-700 bg-yellow-100 rounded-full">Rusak</span>
-                                    @elseif($unit->status == 'hilang')
-                                        <span class="px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full">Hilang</span>
+                                    @elseif($unit->status == 'rusak_ringan')
+                                        <span class="px-2 py-1 text-xs font-semibold text-yellow-700 bg-yellow-100 rounded-full">Rusak Ringan</span>
+                                    @elseif($unit->status == 'rusak_berat')
+                                        <span class="px-2 py-1 text-xs font-semibold text-yellow-800 bg-yellow-200 rounded-full">Rusak Berat</span>
+                                    {{-- 'hilang' status removed from system; legacy rows will be migrated to 'rusak_berat' --}}
                                     @else
                                         <span class="px-2 py-1 text-xs font-semibold text-gray-700 bg-gray-100 rounded-full">{{ ucfirst($unit->status) }}</span>
                                     @endif
@@ -218,14 +218,14 @@
                         <label for="edit_status" class="block text-sm font-medium text-gray-700">Status <span class="text-red-500">*</span></label>
                         <select name="status" id="edit_status" x-model="editItem.status" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
                             <option value="baik">Baik</option>
-                            <option value="rusak">Rusak</option>
-                            <option value="hilang">Hilang</option>
+                            <option value="rusak_ringan">Rusak Ringan</option>
+                            <option value="rusak_berat">Rusak Berat</option>
                             <option value="dipinjam">Dipinjam</option>
                         </select>
                     </div>
                     <div>
                         <label for="edit_keterangan" class="block text-sm font-medium text-gray-700">Keterangan</label>
-                        <textarea name="keterangan" id="edit_keterangan" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" x-model="editItem.keterangan" placeholder="Keterangan jika rusak atau hilang..."></textarea>
+                        <textarea name="keterangan" id="edit_keterangan" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" x-model="editItem.keterangan" placeholder="Keterangan jika rusak..."></textarea>
                     </div>
                     <div class="flex justify-end gap-4 pt-4">
                         <button type="button" @click="showEditModal = false" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Batal</button>

@@ -52,15 +52,19 @@ class KembalikanBarangController extends Controller
 
         // Validasi setiap status unit
         foreach ($unitStatuses as $unitId => $statusData) {
-            if (!isset($statusData['status']) || !in_array($statusData['status'], ['dikembalikan', 'rusak', 'hilang'])) {
+            if (!isset($statusData['status'])) {
+                return back()->with('error', 'Status unit tidak ditemukan untuk unit ID: ' . $unitId);
+            }
+
+            $normalizedStatus = $this->normalizeUnitReturnStatus($statusData['status']);
+            if (!$normalizedStatus) {
                 return back()->with('error', 'Status unit tidak valid untuk unit ID: ' . $unitId);
             }
 
-            // Jika rusak atau hilang, keterangan wajib diisi
-            if (in_array($statusData['status'], ['rusak', 'hilang'])) {
-                if (empty($statusData['keterangan'])) {
-                    return back()->with('error', 'Keterangan wajib diisi untuk unit yang rusak atau hilang.');
-                }
+            $unitStatuses[$unitId]['status'] = $normalizedStatus;
+
+            if ($this->isDamagedStatus($normalizedStatus) && empty($statusData['keterangan'])) {
+                return back()->with('error', 'Keterangan wajib diisi untuk unit yang rusak.');
             }
         }
 
@@ -95,8 +99,8 @@ class KembalikanBarangController extends Controller
                 // Update status pengembalian unit
                 $peminjamanUnit->status_pengembalian = $statusData['status'];
 
-                // Jika rusak atau hilang, simpan foto dan keterangan
-                if (in_array($statusData['status'], ['rusak', 'hilang'])) {
+                // Jika rusak, simpan foto dan keterangan
+                if ($this->isDamagedStatus($statusData['status'])) {
                     $adaBarangRusakHilang = true;
                     $peminjamanUnit->keterangan_kondisi = $statusData['keterangan'] ?? null;
 
@@ -130,7 +134,7 @@ class KembalikanBarangController extends Controller
 
             $statusPengembalian = 'Aman';
             if ($adaBarangRusakHilang && $isTerlambat) {
-                $statusPengembalian = 'Rusak/Hilang dan Terlambat';
+                $statusPengembalian = 'Rusak dan Terlambat';
             } elseif ($adaBarangRusakHilang) {
                 $statusPengembalian = 'Rusak/Hilang';
             } elseif ($isTerlambat) {
@@ -143,7 +147,7 @@ class KembalikanBarangController extends Controller
                 'user_id' => $userId,
                 'tanggal_kembali' => $request->tanggal_kembali,
                 'status_pengembalian' => $statusPengembalian,
-                'deskripsi_kehilangan' => $adaBarangRusakHilang ? 'Ada unit rusak/hilang, lihat detail unit' : null,
+                'deskripsi_kehilangan' => $adaBarangRusakHilang ? 'Ada unit rusak, lihat detail unit' : null,
                 'gambar_bukti' => $imagePath,
             ]);
 
@@ -222,5 +226,23 @@ class KembalikanBarangController extends Controller
         }
 
         throw new \Exception('Invalid base64 image format');
+    }
+
+    private function normalizeUnitReturnStatus(string $status): ?string
+    {
+        $map = [
+            'rusak' => 'rusak_ringan',
+            'hilang' => 'rusak_berat',
+        ];
+
+        $normalized = $map[$status] ?? $status;
+        $allowed = ['dikembalikan', 'rusak_ringan', 'rusak_berat'];
+
+        return in_array($normalized, $allowed, true) ? $normalized : null;
+    }
+
+    private function isDamagedStatus(string $status): bool
+    {
+        return in_array($status, ['rusak_ringan', 'rusak_berat'], true);
     }
 }

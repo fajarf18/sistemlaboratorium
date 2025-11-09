@@ -58,8 +58,8 @@ class KeranjangController extends Controller
 
         if ($keranjangItem) {
             $keranjangItem->jumlah += $request->jumlah;
-            if ($keranjangItem->jumlah > $barang->stok) {
-                $keranjangItem->jumlah = $barang->stok;
+            if ($keranjangItem->jumlah > $stokTersedia) {
+                $keranjangItem->jumlah = $stokTersedia;
             }
             $keranjangItem->save();
         } else {
@@ -81,8 +81,9 @@ class KeranjangController extends Controller
         $request->validate(['jumlah' => 'required|integer|min:1']);
         $keranjangItem = Keranjang::where('id', $id)->where('user_id', Auth::id())->firstOrFail();
         
-        if ($request->jumlah > $keranjangItem->barang->stok) {
-            return back()->with('error', 'Jumlah melebihi stok.');
+        $stokBaikTersedia = $keranjangItem->barang->stok_baik;
+        if ($request->jumlah > $stokBaikTersedia) {
+            return back()->with('error', 'Jumlah melebihi stok tersedia (baik).');
         }
 
         $keranjangItem->update(['jumlah' => $request->jumlah]);
@@ -189,4 +190,3 @@ class KeranjangController extends Controller
         }
     }
 }
-

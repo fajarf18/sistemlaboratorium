@@ -1,3 +1,7 @@
+@php
+    use Illuminate\Support\Str;
+@endphp
+
 <x-admin-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
@@ -48,16 +52,34 @@
         @endif
 
         <div class="bg-white p-6 rounded-xl shadow-sm">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                <a href="{{ route('admin.history.download', request()->query()) }}" class="flex items-center justify-center gap-2 w-full md:w-auto px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition duration-150">
+            <div class="flex flex-col lg:flex-row gap-3 items-center mb-6">
+                <a href="{{ route('admin.history.download', request()->query()) }}" class="flex items-center justify-center gap-2 w-full lg:w-auto px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition duration-150">
                     <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
                     Download Excel
                 </a>
-                <form action="{{ route('admin.history.index') }}" method="GET" class="relative w-full md:w-1/3">
-                    <input type="text" name="search" placeholder="Cari Nama atau NIM..." value="{{ $search ?? '' }}" class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                    <button type="submit" class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 hover:text-gray-600">
-                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
-                    </button>
+                <form action="{{ route('admin.history.index') }}" method="GET" class="w-full lg:flex-1">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
+                        <div class="relative lg:col-span-6">
+                            <input type="text" name="search" placeholder="Cari Nama atau NIM..." value="{{ $search ?? '' }}" class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                            <button type="submit" class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 hover:text-gray-600">
+                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+                            </button>
+                        </div>
+                        <div class="w-full lg:col-span-2">
+                            <label for="start_date" class="block text-xs text-gray-500 mb-1">Tanggal Mulai</label>
+                            <input type="date" name="start_date" id="start_date" value="{{ $startDate }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="w-full lg:col-span-2">
+                            <label for="end_date" class="block text-xs text-gray-500 mb-1">Tanggal Selesai</label>
+                            <input type="date" name="end_date" id="end_date" value="{{ $endDate }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="flex gap-2 w-full lg:col-span-2">
+                            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition duration-150 w-full">Terapkan</button>
+                            @if(($search ?? null) || ($startDate ?? null) || ($endDate ?? null))
+                                <a href="{{ route('admin.history.index') }}" class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-semibold rounded-lg border border-gray-300 hover:bg-gray-200 transition duration-150 w-full text-center">Reset</a>
+                            @endif
+                        </div>
+                    </div>
                 </form>
             </div>
             
@@ -89,13 +111,22 @@
                                 </td>
                                 <td class="p-4 text-gray-500">{{ \Carbon\Carbon::parse($history->tanggal_pinjam)->format('d M Y') }}</td>
                                 <td class="p-4 text-gray-500">{{ \Carbon\Carbon::parse($history->tanggal_kembali)->format('d M Y') }}</td>
+                                @php
+                                    $statusLabel = $history->final_status_pengembalian;
+                                    $statusLower = Str::lower($statusLabel);
+                                    $statusClass = 'bg-gray-100 text-gray-800';
+
+                                    if (Str::contains($statusLower, 'rusak')) {
+                                        $statusClass = 'bg-yellow-100 text-yellow-800';
+                                    } elseif (Str::contains($statusLower, 'terlambat')) {
+                                        $statusClass = 'bg-yellow-100 text-yellow-800';
+                                    } elseif (Str::contains($statusLower, 'aman')) {
+                                        $statusClass = 'bg-green-100 text-green-800';
+                                    }
+                                @endphp
                                 <td class="p-4 text-center">
-                                    <span class="inline-block px-3 py-1 text-xs font-medium rounded-full 
-                                        @if(optional($history->history)->status_pengembalian == 'Aman') bg-green-100 text-green-800
-                                        @elseif(Str::contains(optional($history->history)->status_pengembalian, 'Hilang')) bg-red-100 text-red-800
-                                        @elseif(Str::contains(optional($history->history)->status_pengembalian, 'Terlambat')) bg-yellow-100 text-yellow-800
-                                        @else bg-gray-100 text-gray-800 @endif">
-                                        {{ optional($history->history)->status_pengembalian ?? 'N/A' }}
+                                    <span class="inline-block px-3 py-1 text-xs font-medium rounded-full {{ $statusClass }}">
+                                        {{ $statusLabel }}
                                     </span>
                                 </td>
                                 <td class="p-4">
@@ -151,6 +182,17 @@
                             <p class="text-gray-500">Tanggal Kembali</p>
                             <p class="font-semibold" x-text="new Date(previewItem.tanggal_kembali).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })"></p>
                         </div>
+                        <div class="md:col-span-2">
+                            <p class="text-gray-500">Status Pengembalian</p>
+                            <span class="inline-block mt-1 px-3 py-1 text-xs font-semibold rounded-full"
+                                  :class="{
+                                      'bg-green-100 text-green-800': previewItem.final_status_pengembalian?.toLowerCase().includes('aman') && !previewItem.final_status_pengembalian?.toLowerCase().includes('rusak'),
+                                      'bg-yellow-100 text-yellow-800': previewItem.final_status_pengembalian?.toLowerCase().includes('rusak') || previewItem.final_status_pengembalian?.toLowerCase().includes('terlambat'),
+                                      'bg-gray-100 text-gray-800': !previewItem.final_status_pengembalian
+                                  }"
+                                  x-text="previewItem.final_status_pengembalian ?? 'N/A'">
+                            </span>
+                        </div>
                     </div>
 
                     {{-- Rincian Barang --}}
@@ -169,7 +211,7 @@
                                     <template x-for="item in previewItem.detail_peminjaman" :key="item.id">
                                         <tr class="border-t">
                                             <td class="px-4 py-2 text-gray-800" x-text="item.barang.nama_barang"></td>
-                                            <td class="px-4 py-2 text-center text-gray-600" x-text="(item.jumlah + item.jumlah_hilang) + ' pcs'"></td>
+                                            <td class="px-4 py-2 text-center text-gray-600" x-text="(item.peminjaman_units?.length ?? 0) + ' unit'"></td>
                                             <td class="px-4 py-2 text-center">
                                                 <button @click="openUnitsModal(item)" class="px-3 py-1 text-xs font-medium text-white bg-purple-500 rounded hover:bg-purple-600">
                                                     View Units
@@ -218,22 +260,22 @@
                         </button>
                     </div>
 
-                    <div class="mb-4 p-3 bg-gray-50 rounded">
-                        <div class="grid grid-cols-3 gap-2 text-sm">
-                            <div>
-                                <p class="text-gray-600">Total Unit</p>
-                                <p class="text-lg font-bold" x-text="selectedItem?.jumlah + selectedItem?.jumlah_hilang"></p>
+                            <div class="mb-4 p-3 bg-gray-50 rounded">
+                                <div class="grid grid-cols-3 gap-2 text-sm">
+                                    <div>
+                                        <p class="text-gray-600">Total Unit</p>
+                                        <p class="text-lg font-bold" x-text="selectedItem?.peminjaman_units?.length ?? 0"></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-600">Dikembalikan Baik</p>
+                                        <p class="text-lg font-bold text-green-600" x-text="getUnitsByStatus('dikembalikan')"></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-600">Rusak</p>
+                                        <p class="text-lg font-bold text-red-600" x-text="getUnitsByStatus('rusak_ringan') + getUnitsByStatus('rusak_berat')"></p>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <p class="text-gray-600">Dikembalikan Baik</p>
-                                <p class="text-lg font-bold text-green-600" x-text="getUnitsByStatus('dikembalikan')"></p>
-                            </div>
-                            <div>
-                                <p class="text-gray-600">Rusak/Hilang</p>
-                                <p class="text-lg font-bold text-red-600" x-text="getUnitsByStatus('rusak') + getUnitsByStatus('hilang')"></p>
-                            </div>
-                        </div>
-                    </div>
 
                     <div class="border rounded-lg overflow-hidden">
                         <table class="w-full text-sm">
@@ -255,8 +297,9 @@
                                             <span class="px-2 py-1 text-xs rounded-full font-semibold"
                                                   :class="{
                                                       'bg-green-100 text-green-700': unit.status_pengembalian === 'dikembalikan',
-                                                      'bg-yellow-100 text-yellow-700': unit.status_pengembalian === 'rusak',
-                                                      'bg-red-100 text-red-700': unit.status_pengembalian === 'hilang'
+                                                      // both rusak_ringan and rusak_berat will match this
+                                                      'bg-yellow-100 text-yellow-700': unit.status_pengembalian?.toLowerCase().includes('rusak'),
+                                                      'bg-gray-100 text-gray-700': !unit.status_pengembalian
                                                   }"
                                                   x-text="unit.status_pengembalian.charAt(0).toUpperCase() + unit.status_pengembalian.slice(1)">
                                             </span>

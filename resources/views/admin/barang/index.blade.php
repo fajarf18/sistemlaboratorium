@@ -130,7 +130,7 @@
                             <th class="p-4 font-semibold">Gambar</th>
                             <th class="p-4 font-semibold">ID Barang</th>
                             <th class="p-4 font-semibold">Tipe</th>
-                            <th class="p-4 font-semibold">Stok</th>
+                            <th class="p-4 font-semibold">Total Unit</th>
                             <th class="p-4 font-semibold">Aksi</th>
                         </tr>
                     </thead>
@@ -144,7 +144,7 @@
                                 </td>
                                 <td class="p-4 text-gray-500">{{ $barang->kode_barang }}</td>
                                 <td class="p-4 text-gray-500">{{ $barang->tipe }}</td>
-                                <td class="p-4 text-gray-500">{{ $barang->stok }} pcs</td>
+                                <td class="p-4 text-gray-500">{{ $barang->total_stok }} unit</td>
                                 <td class="p-4">
                                     <div class="flex gap-2">
                                         <a href="{{ route('admin.barang.units.index', $barang) }}" class="p-2 bg-purple-600 text-white rounded-md hover:bg-purple-700" title="Lihat Units">
@@ -195,6 +195,11 @@
                     <div>
                         <label for="nama_barang" class="block text-sm font-medium text-gray-700">Nama Barang <span class="text-red-500">*</span></label>
                         <input type="text" name="nama_barang" id="nama_barang" value="{{ old('nama_barang') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                    </div>
+                    <div>
+                        <label for="kode_barang" class="block text-sm font-medium text-gray-700">ID/Kode Barang <span class="text-red-500">*</span></label>
+                        <input type="text" name="kode_barang" id="kode_barang" value="{{ old('kode_barang') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm uppercase" required>
+                        <p class="mt-1 text-xs text-gray-500">Kode akan digunakan untuk membentuk kode unit (contoh: KMB-001).</p>
                     </div>
                     <div>
                         <label for="tipe" class="block text-sm font-medium text-gray-700">Tipe <span class="text-red-500">*</span></label>
@@ -299,8 +304,12 @@
                             <p class="font-semibold" x-text="previewItem.tipe"></p>
                         </div>
                         <div>
-                            <p class="text-gray-500">Stok Tersedia</p>
-                            <p class="font-semibold" x-text="previewItem.stok + ' pcs'"></p>
+                            <p class="text-gray-500">Total Unit</p>
+                            <p class="font-semibold" x-text="(previewItem.total_stok ?? 0) + ' unit'"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">Unit Siap Dipinjam (baik)</p>
+                            <p class="font-semibold" x-text="previewItem.stok + ' unit'"></p>
                         </div>
                         <div>
                             <p class="text-gray-500">Tanggal Ditambahkan</p>

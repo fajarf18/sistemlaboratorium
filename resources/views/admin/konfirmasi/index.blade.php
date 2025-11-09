@@ -156,13 +156,14 @@
                     <template x-if="detail">
                         <div>
                             <template x-if="modalType === 'pengembalian' && detail.status_pengembalian">
-                                <div class="p-4 mb-4 text-sm rounded-lg border-l-4"
-                                     :class="{
-                                        'bg-red-100 border-red-500 text-red-800': detail.status_pengembalian.includes('Hilang'),
-                                        'bg-blue-100 border-blue-500 text-blue-800': !detail.status_pengembalian.includes('Hilang') && detail.status_pengembalian.includes('Habis'),
-                                        'bg-yellow-100 border-yellow-500 text-yellow-800': !detail.status_pengembalian.includes('Hilang') && !detail.status_pengembalian.includes('Habis') && detail.status_pengembalian.includes('Terlambat'),
-                                        'bg-green-100 border-green-500 text-green-800': detail.status_pengembalian === 'Aman'
-                                     }">
+                                          <div class="p-4 mb-4 text-sm rounded-lg border-l-4"
+                                                 :class="{
+                                                     // use yellow for any 'rusak' return statuses
+                                                     'bg-yellow-100 border-yellow-500 text-yellow-800': detail.status_pengembalian.toLowerCase().includes('rusak'),
+                                                     'bg-blue-100 border-blue-500 text-blue-800': !detail.status_pengembalian.toLowerCase().includes('rusak') && detail.status_pengembalian.toLowerCase().includes('habis'),
+                                                     'bg-yellow-100 border-yellow-500 text-yellow-800': !detail.status_pengembalian.toLowerCase().includes('rusak') && !detail.status_pengembalian.toLowerCase().includes('habis') && detail.status_pengembalian.toLowerCase().includes('terlambat'),
+                                                     'bg-green-100 border-green-500 text-green-800': detail.status_pengembalian === 'Aman'
+                                                 }">
                                     <p class="font-bold text-lg" x-text="detail.status_pengembalian"></p>
                                     
                                     <ul class="mt-2 list-disc list-inside">
@@ -274,7 +275,7 @@
             {{-- Ringkasan untuk Pengembalian --}}
             <template x-if="modalType === 'pengembalian'">
                 <div class="mb-4 p-3 bg-gray-50 rounded">
-                    <div class="grid grid-cols-3 gap-2 text-sm">
+                        <div class="grid grid-cols-3 gap-2 text-sm">
                         <div>
                             <p class="text-gray-600">Total Unit</p>
                             <p class="text-lg font-bold" x-text="selectedItem?.jumlah"></p>
@@ -284,8 +285,8 @@
                             <p class="text-lg font-bold text-green-600" x-text="getUnitsByStatus('dikembalikan')"></p>
                         </div>
                         <div>
-                            <p class="text-gray-600">Rusak/Hilang</p>
-                            <p class="text-lg font-bold text-red-600" x-text="getUnitsByStatus('rusak') + getUnitsByStatus('hilang')"></p>
+                            <p class="text-gray-600">Rusak</p>
+                            <p class="text-lg font-bold text-red-600" x-text="getUnitsByStatus('rusak_ringan') + getUnitsByStatus('rusak_berat')"></p>
                         </div>
                     </div>
                 </div>
@@ -333,11 +334,10 @@
                                     <span class="px-2 py-1 text-xs rounded-full font-semibold"
                                           :class="{
                                               'bg-green-100 text-green-700': unit.barang_unit.status === 'baik',
-                                              'bg-yellow-100 text-yellow-700': unit.barang_unit.status === 'rusak',
-                                              'bg-red-100 text-red-700': unit.barang_unit.status === 'hilang',
+                                              'bg-yellow-100 text-yellow-700': unit.barang_unit.status?.toLowerCase().includes('rusak'),
                                               'bg-blue-100 text-blue-700': unit.barang_unit.status === 'dipinjam'
                                           }"
-                                          x-text="unit.barang_unit.status?.charAt(0).toUpperCase() + unit.barang_unit.status?.slice(1)">
+                                          x-text="unit.barang_unit.status?.replaceAll('_',' ')">
                                     </span>
                                 </td>
                                 <template x-if="modalType === 'pengembalian'">
@@ -345,11 +345,10 @@
                                         <span class="px-2 py-1 text-xs rounded-full font-semibold"
                                               :class="{
                                                   'bg-green-100 text-green-700': unit.status_pengembalian === 'dikembalikan',
-                                                  'bg-yellow-100 text-yellow-700': unit.status_pengembalian === 'rusak',
-                                                  'bg-red-100 text-red-700': unit.status_pengembalian === 'hilang',
+                                                  'bg-yellow-100 text-yellow-700': unit.status_pengembalian?.toLowerCase()?.includes('rusak'),
                                                   'bg-gray-100 text-gray-700': unit.status_pengembalian === 'belum'
                                               }"
-                                              x-text="unit.status_pengembalian?.charAt(0).toUpperCase() + unit.status_pengembalian?.slice(1)">
+                                                  x-text="unit.status_pengembalian?.replaceAll('_',' ')?.charAt(0).toUpperCase() + unit.status_pengembalian?.replaceAll('_',' ')?.slice(1)">
                                         </span>
                                     </td>
                                 </template>

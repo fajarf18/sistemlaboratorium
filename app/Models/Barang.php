@@ -23,6 +23,10 @@ class Barang extends Model
         'deskripsi',
     ];
 
+    protected $appends = [
+        'total_stok',
+    ];
+
     /**
      * Relasi ke tabel barang_units
      */
@@ -44,7 +48,24 @@ class Barang extends Model
      */
     public function unitsDamaged()
     {
-        return $this->hasMany(BarangUnit::class)->where('status', 'rusak');
+        // Rusak sekarang terbagi menjadi dua tipe: rusak_ringan dan rusak_berat
+        return $this->hasMany(BarangUnit::class)->whereIn('status', ['rusak_ringan', 'rusak_berat']);
+    }
+
+    /**
+     * Get units rusak ringan
+     */
+    public function unitsRusakRingan()
+    {
+        return $this->hasMany(BarangUnit::class)->where('status', 'rusak_ringan');
+    }
+
+    /**
+     * Get units rusak berat
+     */
+    public function unitsRusakBerat()
+    {
+        return $this->hasMany(BarangUnit::class)->where('status', 'rusak_berat');
     }
 
     /**
@@ -52,7 +73,8 @@ class Barang extends Model
      */
     public function unitsMissing()
     {
-        return $this->hasMany(BarangUnit::class)->where('status', 'hilang');
+        // Status 'hilang' sudah dihapus dari sistem. Kembalikan relasi kosong untuk kompatibilitas.
+        return $this->hasMany(BarangUnit::class)->whereRaw("0=1");
     }
 
     /**
@@ -84,7 +106,23 @@ class Barang extends Model
      */
     public function getStokRusakAttribute()
     {
-        return $this->units()->where('status', 'rusak')->count();
+        return $this->units()->whereIn('status', ['rusak_ringan', 'rusak_berat'])->count();
+    }
+
+    /**
+     * Accessor untuk jumlah stok rusak ringan
+     */
+    public function getStokRusakRinganAttribute()
+    {
+        return $this->units()->where('status', 'rusak_ringan')->count();
+    }
+
+    /**
+     * Accessor untuk jumlah stok rusak berat
+     */
+    public function getStokRusakBeratAttribute()
+    {
+        return $this->units()->where('status', 'rusak_berat')->count();
     }
 
     /**
@@ -92,7 +130,8 @@ class Barang extends Model
      */
     public function getStokHilangAttribute()
     {
-        return $this->units()->where('status', 'hilang')->count();
+        // Status hilang tidak lagi digunakan
+        return 0;
     }
 
     /**
@@ -100,6 +139,10 @@ class Barang extends Model
      */
     public function getTotalStokAttribute()
     {
+        if (array_key_exists('units_count', $this->attributes)) {
+            return $this->attributes['units_count'];
+        }
+
         return $this->units()->count();
     }
 }

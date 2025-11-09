@@ -35,14 +35,14 @@
             <tbody>
                 @forelse ($keranjangItems as $item)
                 {{-- Tambahkan class dinamis untuk menandai baris yang stoknya kurang --}}
-                <tr class="bg-white border-b hover:bg-gray-50" :class="{ 'opacity-50 bg-red-50': {{ $item->jumlah }} > {{ $item->barang->stok }} }">
+                <tr class="bg-white border-b hover:bg-gray-50" :class="{ 'opacity-50 bg-red-50': {{ $item->jumlah }} > {{ $item->barang->stok_baik }} }">
                     <td class="p-4">
-                        <input type="checkbox" value="{{ $item->id }}" x-model="selectedItems" :disabled="{{ $item->jumlah > $item->barang->stok }}" class="rounded border-gray-300">
+                        <input type="checkbox" value="{{ $item->id }}" x-model="selectedItems" :disabled="{{ $item->jumlah > $item->barang->stok_baik }}" class="rounded border-gray-300">
                     </td>
                     <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                         {{ $item->barang->nama_barang }}
-                        @if($item->jumlah > $item->barang->stok)
-                            <span class="block text-xs text-red-500 font-normal">(Stok tidak mencukupi: {{ $item->barang->stok }})</span>
+                        @if($item->jumlah > $item->barang->stok_baik)
+                            <span class="block text-xs text-red-500 font-normal">(Stok tidak mencukupi: {{ $item->barang->stok_baik }})</span>
                         @endif
                     </th>
                     <td class="px-6 py-4">
@@ -65,7 +65,7 @@
                                    name="jumlah" 
                                    value="{{ $item->jumlah }}" 
                                    min="1" 
-                                   max="{{ $item->barang->stok }}" 
+                                   max="{{ $item->barang->stok_baik }}" 
                                    onchange="this.form.submit()" 
                                    class="w-16 text-center border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
                             
@@ -171,7 +171,7 @@
                 let validItems = [];
                 if (checked) {
                     @foreach($keranjangItems as $item)
-                        @if($item->jumlah <= $item->barang->stok)
+                        @if($item->jumlah <= $item->barang->stok_baik)
                             validItems.push('{{ $item->id }}');
                         @endif
                     @endforeach

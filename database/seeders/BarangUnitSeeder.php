@@ -4,8 +4,8 @@ namespace Database\Seeders;
 
 use App\Models\Barang;
 use App\Models\BarangUnit;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class BarangUnitSeeder extends Seeder
 {
@@ -14,28 +14,35 @@ class BarangUnitSeeder extends Seeder
      */
     public function run(): void
     {
-        // Ambil semua barang
+        BarangUnit::query()->delete();
+
         $barangs = Barang::all();
 
         foreach ($barangs as $barang) {
-            // Generate unit codes berdasarkan stok yang ada
+            $prefix = strtoupper(Str::slug($barang->kode_barang, ''));
+
             for ($i = 1; $i <= $barang->stok; $i++) {
-                // Format kode: Inisial Barang + ID Barang + Nomor Unit
-                // Contoh: GU-1-001 (Gelas Ukur, ID 1, Unit 001)
-                $prefix = strtoupper(substr($barang->nama_barang, 0, 2));
-                $unitCode = sprintf('%s-%d-%03d', $prefix, $barang->id, $i);
+                $status = 'baik';
+                $keterangan = null;
+
+                if ($i === 1 && $barang->id % 9 === 0) {
+                    $status = 'rusak_ringan';
+                    $keterangan = "Unit awal {$barang->nama_barang} perlu perbaikan ringan.";
+                } elseif ($i === 2 && $barang->id % 13 === 0) {
+                    $status = 'rusak_berat';
+                    $keterangan = "{$barang->nama_barang} seri {$barang->kode_barang} retak berat.";
+                } elseif ($i <= 2 && $barang->id % 7 === 0) {
+                    $status = 'dipinjam';
+                    $keterangan = 'Sedang dipakai untuk praktikum aktif.';
+                }
 
                 BarangUnit::create([
                     'barang_id' => $barang->id,
-                    'unit_code' => $unitCode,
-                    'status' => 'baik', // Default semua baik
-                    'keterangan' => null,
+                    'unit_code' => sprintf('%s-%03d', $prefix, $i),
+                    'status' => $status,
+                    'keterangan' => $keterangan,
                 ]);
             }
-
-            $this->command->info("Generated {$barang->stok} units for {$barang->nama_barang}");
         }
-
-        $this->command->info('Barang units seeded successfully!');
     }
 }

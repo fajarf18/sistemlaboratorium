@@ -64,18 +64,18 @@
                         {{-- PERUBAHAN DI SINI: Menambahkan kelas 'align-middle' --}}
                         <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap align-middle">{{ $barang->nama_barang }}</th>
                         <td class="px-6 py-4 align-middle">{{ $barang->tipe }}</td>
-                        <td class="px-6 py-4 align-middle">{{ $barang->stok }} pcs</td>
+                        <td class="px-6 py-4 align-middle">{{ $barang->stok_baik }} pcs</td>
                         <td class="px-6 py-4 align-middle">
                             <div class="flex items-center justify-center space-x-2">
-                                <button type="button" onclick="this.nextElementSibling.stepDown()" class="px-2 py-1 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-100" @if($barang->stok == 0) disabled @endif>-</button>
-                                <input type="number" name="jumlah" value="1" min="1" max="{{ $barang->stok }}" class="w-16 text-center border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" @if($barang->stok == 0) disabled @endif>
-                                <button type="button" onclick="this.previousElementSibling.stepUp()" class="px-2 py-1 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-100" @if($barang->stok == 0) disabled @endif>+</button>
+                                <button type="button" onclick="this.nextElementSibling.stepDown()" class="px-2 py-1 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-100" @if($barang->stok_baik == 0) disabled @endif>-</button>
+                                <input type="number" name="jumlah" value="1" min="1" max="{{ $barang->stok_baik }}" class="w-16 text-center border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" @if($barang->stok_baik == 0) disabled @endif>
+                                <button type="button" onclick="this.previousElementSibling.stepUp()" class="px-2 py-1 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-100" @if($barang->stok_baik == 0) disabled @endif>+</button>
                             </div>
                         </td>
                         <td class="px-6 py-4 text-center align-middle">
                             <button type="submit" 
-                                    @if($barang->stok == 0) disabled @endif
-                                    class="px-4 py-2 text-white rounded-lg transition {{ $barang->stok == 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700' }}">
+                                    @if($barang->stok_baik == 0) disabled @endif
+                                    class="px-4 py-2 text-white rounded-lg transition {{ $barang->stok_baik == 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700' }}">
                                 + Tambah
                             </button>
                         </td>

@@ -22,7 +22,15 @@ class BarangUnitController extends Controller
 
         // Filter berdasarkan status jika ada
         if ($status) {
-            $query->where('status', $status);
+            if ($status === 'rusak') {
+                // 'rusak' adalah istilah lama, terjemahkan menjadi kedua tipe rusak
+                $query->whereIn('status', ['rusak_ringan', 'rusak_berat']);
+            } elseif ($status === 'hilang') {
+                // status hilang sudah dihapus -> tidak ada hasil
+                $query->whereRaw('0=1');
+            } else {
+                $query->where('status', $status);
+            }
         }
 
         // Filter berdasarkan pencarian unit code
@@ -90,12 +98,23 @@ class BarangUnitController extends Controller
     public function update(Request $request, BarangUnit $unit)
     {
         $request->validate([
-            'status' => 'required|in:baik,rusak,hilang,dipinjam',
+            // Terima nilai lama untuk kompatibilitas, tapi akan di-map ke nilai baru
+            'status' => 'required|in:baik,rusak,rusak_ringan,rusak_berat,hilang,dipinjam',
             'keterangan' => 'nullable|string',
         ]);
 
+        // Map nilai legacy ke nilai baru
+        $newStatus = $request->status;
+        if ($newStatus === 'rusak') {
+            $newStatus = 'rusak_ringan';
+        }
+        if ($newStatus === 'hilang') {
+            // 'hilang' dihapus; map ke 'rusak_berat' agar tidak hilang data
+            $newStatus = 'rusak_berat';
+        }
+
         $unit->update([
-            'status' => $request->status,
+            'status' => $newStatus,
             'keterangan' => $request->keterangan,
         ]);
 

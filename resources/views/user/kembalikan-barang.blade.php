@@ -75,11 +75,11 @@
                 <div class="flex-1">
                     <div class="flex justify-between text-xs mb-1">
                         <span>Progress Pengecekan</span>
-                        <span x-text="Math.round((unitsDikembalikan + unitsRusak + unitsHilang) / allUnits.length * 100) + '%'"></span>
+                        <span x-text="Math.round((unitsDikembalikan + unitsRusak) / allUnits.length * 100) + '%'"></span>
                     </div>
                     <div class="bg-white bg-opacity-20 rounded-full h-2">
                         <div class="bg-white rounded-full h-2 transition-all duration-300"
-                             :style="`width: ${(unitsDikembalikan + unitsRusak + unitsHilang) / allUnits.length * 100}%`"></div>
+                             :style="`width: ${(unitsDikembalikan + unitsRusak) / allUnits.length * 100}%`"></div>
                     </div>
                 </div>
                 <button @click="cekBarang" :disabled="allUnits.length === 0"
@@ -119,13 +119,13 @@
                                 <p class="text-xs text-gray-600">Baik</p>
                                 <p class="text-base md:text-lg font-bold text-green-600" x-text="getStatusCountForDetail(detail, 'dikembalikan')"></p>
                             </div>
-                            <div class="text-center px-2 py-1 bg-yellow-50 rounded-lg flex-1 md:flex-none min-w-[70px]">
-                                <p class="text-xs text-gray-600">Rusak</p>
-                                <p class="text-base md:text-lg font-bold text-yellow-600" x-text="getStatusCountForDetail(detail, 'rusak')"></p>
+                            <div class="text-center px-2 py-1 bg-yellow-50 rounded-lg flex-1 md:flex-none min-w-[90px]">
+                                <p class="text-xs text-gray-600">Rusak Ringan</p>
+                                <p class="text-base md:text-lg font-bold text-yellow-600" x-text="getStatusCountForDetail(detail, 'rusak_ringan')"></p>
                             </div>
-                            <div class="text-center px-2 py-1 bg-red-50 rounded-lg flex-1 md:flex-none min-w-[70px]">
-                                <p class="text-xs text-gray-600">Hilang</p>
-                                <p class="text-base md:text-lg font-bold text-red-600" x-text="getStatusCountForDetail(detail, 'hilang')"></p>
+                            <div class="text-center px-2 py-1 bg-yellow-100 rounded-lg flex-1 md:flex-none min-w-[90px]">
+                                <p class="text-xs text-gray-600">Rusak Berat</p>
+                                <p class="text-base md:text-lg font-bold text-yellow-800" x-text="getStatusCountForDetail(detail, 'rusak_berat')"></p>
                             </div>
                         </div>
                     </div>
@@ -155,12 +155,12 @@
                                                     class="text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full"
                                                     :class="{
                                                         'bg-green-50 text-green-700 border-green-300': unitStatuses[unit.id].status === 'dikembalikan',
-                                                        'bg-yellow-50 text-yellow-700 border-yellow-300': unitStatuses[unit.id].status === 'rusak',
-                                                        'bg-red-50 text-red-700 border-red-300': unitStatuses[unit.id].status === 'hilang'
+                                                        'bg-yellow-50 text-yellow-700 border-yellow-300': unitStatuses[unit.id].status === 'rusak_ringan',
+                                                        'bg-yellow-100 text-yellow-800 border-yellow-300': unitStatuses[unit.id].status === 'rusak_berat'
                                                     }">
                                                 <option value="dikembalikan">✓ Dikembalikan Baik</option>
-                                                <option value="rusak">⚠ Rusak</option>
-                                                <option value="hilang">✕ Hilang</option>
+                                                <option value="rusak_ringan">⚠ Rusak Ringan</option>
+                                                <option value="rusak_berat">⚠ Rusak Berat</option>
                                             </select>
                                         </td>
                                         <td class="px-4 py-4">
@@ -228,12 +228,12 @@
                                             class="w-full text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                                             :class="{
                                                 'bg-green-50 text-green-700 border-green-300': unitStatuses[unit.id].status === 'dikembalikan',
-                                                'bg-yellow-50 text-yellow-700 border-yellow-300': unitStatuses[unit.id].status === 'rusak',
-                                                'bg-red-50 text-red-700 border-red-300': unitStatuses[unit.id].status === 'hilang'
+                                                'bg-yellow-50 text-yellow-700 border-yellow-300': unitStatuses[unit.id].status === 'rusak_ringan',
+                                                'bg-yellow-100 text-yellow-800 border-yellow-300': unitStatuses[unit.id].status === 'rusak_berat'
                                             }">
                                         <option value="dikembalikan">✓ Dikembalikan Baik</option>
-                                        <option value="rusak">⚠ Rusak</option>
-                                        <option value="hilang">✕ Hilang</option>
+                                        <option value="rusak_ringan">⚠ Rusak Ringan</option>
+                                        <option value="rusak_berat">⚠ Rusak Berat</option>
                                     </select>
                                 </div>
 
@@ -330,16 +330,16 @@
                 {{-- Modal Body --}}
                 <div class="p-4 sm:p-6 space-y-4 sm:space-y-5">
                     {{-- Alerts --}}
-                    <template x-if="unitsRusakHilang.length > 0">
+                    <template x-if="unitsRusak.length > 0">
                         <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500 p-4 rounded-r-lg shadow-sm">
                             <div class="flex items-start">
                                 <svg class="w-6 h-6 text-yellow-600 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                                 </svg>
                                 <div class="flex-1">
-                                    <p class="font-bold text-yellow-800">Peringatan: Terdeteksi <span x-text="unitsRusakHilang.length"></span> Unit Rusak/Hilang!</p>
+                                    <p class="font-bold text-yellow-800">Peringatan: Terdeteksi <span x-text="unitsRusak.length"></span> Unit Rusak!</p>
                                     <ul class="mt-2 space-y-1 text-sm text-yellow-700">
-                                        <template x-for="unit in unitsRusakHilang" :key="unit.id">
+                                        <template x-for="unit in unitsRusak" :key="unit.id">
                                             <li class="flex items-center">
                                                 <span class="inline-block w-2 h-2 bg-yellow-600 rounded-full mr-2"></span>
                                                 <span class="font-mono text-xs" x-text="unit.code"></span>
@@ -391,17 +391,17 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                                     </svg>
                                 </div>
-                                <p class="text-xs text-gray-600 font-medium mb-1">Rusak</p>
-                                <p class="text-xl sm:text-2xl font-bold text-yellow-600" x-text="unitsRusak"></p>
+                                <p class="text-xs text-gray-600 font-medium mb-1">Rusak Ringan</p>
+                                <p class="text-xl sm:text-2xl font-bold text-yellow-600" x-text="unitsRusakRingan"></p>
                             </div>
-                            <div class="bg-gradient-to-br from-red-50 to-red-100 p-3 sm:p-4 rounded-lg sm:rounded-xl border border-red-200 text-center hover:shadow-md transition">
+                            <div class="bg-gradient-to-br from-yellow-100 to-yellow-200 p-3 sm:p-4 rounded-lg sm:rounded-xl border border-yellow-300 text-center hover:shadow-md transition">
                                 <div class="flex justify-center mb-1 sm:mb-2">
-                                    <svg class="w-6 h-6 sm:w-8 sm:h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    <svg class="w-6 h-6 sm:w-8 sm:h-8 text-yellow-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                                     </svg>
                                 </div>
-                                <p class="text-xs text-gray-600 font-medium mb-1">Hilang</p>
-                                <p class="text-xl sm:text-2xl font-bold text-red-600" x-text="unitsHilang"></p>
+                                <p class="text-xs text-gray-600 font-medium mb-1">Rusak Berat</p>
+                                <p class="text-xl sm:text-2xl font-bold text-yellow-800" x-text="unitsRusakBerat"></p>
                             </div>
                         </div>
                     </div>
@@ -509,28 +509,29 @@
                 return this.tanggalPinjam ? new Date(this.tanggalPinjam).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
             },
 
-            get unitsRusakHilang() {
+            get unitsDikembalikan() {
+                return Object.values(this.unitStatuses).filter(s => s.status === 'dikembalikan').length;
+            },
+
+            get unitsRusakRingan() {
+                return Object.values(this.unitStatuses).filter(s => s.status === 'rusak_ringan').length;
+            },
+
+            get unitsRusakBerat() {
+                return Object.values(this.unitStatuses).filter(s => s.status === 'rusak_berat').length;
+            },
+
+            get unitsRusak() {
+                // Kembalikan daftar objek unit yang rusak (ringan/berat) untuk tampilan peringatan
                 return this.allUnits.filter(unit => {
                     const status = this.unitStatuses[unit.id].status;
-                    return status === 'rusak' || status === 'hilang';
+                    return status === 'rusak_ringan' || status === 'rusak_berat';
                 }).map(unit => ({
                     id: unit.id,
                     code: unit.barang_unit.unit_code,
                     status: this.unitStatuses[unit.id].status,
                     keterangan: this.unitStatuses[unit.id].keterangan
                 }));
-            },
-
-            get unitsDikembalikan() {
-                return Object.values(this.unitStatuses).filter(s => s.status === 'dikembalikan').length;
-            },
-
-            get unitsRusak() {
-                return Object.values(this.unitStatuses).filter(s => s.status === 'rusak').length;
-            },
-
-            get unitsHilang() {
-                return Object.values(this.unitStatuses).filter(s => s.status === 'hilang').length;
             },
 
             handleUnitPhoto(event, unitId) {

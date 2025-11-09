@@ -1,5 +1,9 @@
 @extends('layouts.app')
 
+@php
+    use Illuminate\Support\Str;
+@endphp
+
 @section('header', 'History Peminjaman')
 
 @section('content')
@@ -46,15 +50,23 @@
                             {{ $history->status }}
                         </span>
                     </td>
+                    @php
+                        $statusLabel = $history->status == 'Dikembalikan' ? $history->final_status_pengembalian : null;
+                        $statusLower = Str::lower($statusLabel ?? '');
+                        $statusClass = 'bg-gray-100 text-gray-800';
+
+                        if (Str::contains($statusLower, 'rusak')) {
+                            $statusClass = 'bg-red-100 text-red-800';
+                        } elseif (Str::contains($statusLower, 'terlambat')) {
+                            $statusClass = 'bg-yellow-100 text-yellow-800';
+                        } elseif (Str::contains($statusLower, 'aman')) {
+                            $statusClass = 'bg-green-100 text-green-800';
+                        }
+                    @endphp
                     <td class="px-6 py-4 text-center align-middle">
-                        @if($history->history && $history->status == 'Dikembalikan')
-                            <span class="inline-block px-3 py-1 text-xs font-medium rounded-full
-                                @if($history->history->status_pengembalian == 'Aman') bg-green-100 text-green-800
-                                @elseif(str_contains($history->history->status_pengembalian, 'Hilang')) bg-red-100 text-red-800
-                                @elseif(str_contains($history->history->status_pengembalian, 'Terlambat')) bg-yellow-100 text-yellow-800
-                                @else bg-gray-100 text-gray-800
-                                @endif">
-                                {{ $history->history->status_pengembalian }}
+                        @if($statusLabel)
+                            <span class="inline-block px-3 py-1 text-xs font-medium rounded-full {{ $statusClass }}">
+                                {{ $statusLabel }}
                             </span>
                         @else
                             <span class="text-gray-400 text-xs">-</span>
@@ -112,16 +124,14 @@
                     </div>
                 </div>
 
-                <template x-if="detail.history">
+                <template x-if="detail.status === 'Dikembalikan'">
                     <div class="p-3 rounded-lg border-l-4"
                          :class="{
-                             'bg-green-50 border-green-500': detail.history.status_pengembalian === 'Aman',
-                             'bg-red-50 border-red-500': detail.history.status_pengembalian?.includes('Hilang'),
-                             'bg-yellow-50 border-yellow-500': detail.history.status_pengembalian?.includes('Terlambat') && !detail.history.status_pengembalian?.includes('Hilang'),
-                             'bg-blue-50 border-blue-500': detail.history.status_pengembalian?.includes('Habis')
+                             'bg-green-50 border-green-500': detail.final_status_pengembalian?.toLowerCase().includes('aman') && !detail.final_status_pengembalian?.toLowerCase().includes('rusak'),
+                             'bg-yellow-50 border-yellow-500': detail.final_status_pengembalian?.toLowerCase().includes('rusak') || detail.final_status_pengembalian?.toLowerCase().includes('terlambat'),
                          }">
                         <p class="font-semibold text-sm">Status Pengembalian:</p>
-                        <p class="font-bold" x-text="detail.history.status_pengembalian"></p>
+                        <p class="font-bold" x-text="detail.final_status_pengembalian"></p>
                     </div>
                 </template>
 
@@ -142,7 +152,7 @@
                                 <template x-for="item in detail.detail_peminjaman" :key="item.id">
                                     <tr class="border-t">
                                         <td class="px-4 py-2" x-text="item.barang.nama_barang"></td>
-                                        <td class="px-4 py-2 text-center" x-text="item.jumlah + item.jumlah_hilang + ' pcs'"></td>
+                                        <td class="px-4 py-2 text-center" x-text="(item.peminjaman_units?.length ?? 0) + ' unit'"></td>
                                         <template x-if="detail.status === 'Dikembalikan'">
                                             <td class="px-4 py-2 text-center">
                                                 <button @click="openUnitsModal(item)" class="px-3 py-1 text-xs font-medium text-white bg-purple-500 rounded hover:bg-purple-600">
@@ -186,22 +196,22 @@
                     </button>
                 </div>
 
-                <div class="mb-4 p-3 bg-gray-50 rounded">
-                    <div class="grid grid-cols-3 gap-2 text-sm">
-                        <div>
-                            <p class="text-gray-600">Total Unit</p>
-                            <p class="text-lg font-bold" x-text="selectedItem?.jumlah + selectedItem?.jumlah_hilang"></p>
+                        <div class="mb-4 p-3 bg-gray-50 rounded">
+                            <div class="grid grid-cols-3 gap-2 text-sm">
+                                <div>
+                                    <p class="text-gray-600">Total Unit</p>
+                                    <p class="text-lg font-bold" x-text="selectedItem?.peminjaman_units?.length ?? 0"></p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-600">Dikembalikan Baik</p>
+                                    <p class="text-lg font-bold text-green-600" x-text="getUnitsByStatus('dikembalikan')"></p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-600">Rusak</p>
+                                    <p class="text-lg font-bold text-red-600" x-text="getUnitsByStatus('rusak_ringan') + getUnitsByStatus('rusak_berat')"></p>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <p class="text-gray-600">Dikembalikan Baik</p>
-                            <p class="text-lg font-bold text-green-600" x-text="getUnitsByStatus('dikembalikan')"></p>
-                        </div>
-                        <div>
-                            <p class="text-gray-600">Rusak/Hilang</p>
-                            <p class="text-lg font-bold text-red-600" x-text="getUnitsByStatus('rusak') + getUnitsByStatus('hilang')"></p>
-                        </div>
-                    </div>
-                </div>
 
                 <div class="border rounded-lg overflow-hidden">
                     <table class="w-full text-sm">
@@ -223,8 +233,10 @@
                                         <span class="px-2 py-1 text-xs rounded-full font-semibold"
                                               :class="{
                                                   'bg-green-100 text-green-700': unit.status_pengembalian === 'dikembalikan',
-                                                  'bg-yellow-100 text-yellow-700': unit.status_pengembalian === 'rusak',
-                                                  'bg-red-100 text-red-700': unit.status_pengembalian === 'hilang'
+                                                  // both rusak_ringan and rusak_berat will match this
+                                                  'bg-yellow-100 text-yellow-700': unit.status_pengembalian?.toLowerCase().includes('rusak'),
+                                                  // removed 'hilang' branch because the status 'hilang' is no longer used
+                                                  'bg-gray-100 text-gray-700': !unit.status_pengembalian
                                               }"
                                               x-text="unit.status_pengembalian.charAt(0).toUpperCase() + unit.status_pengembalian.slice(1)">
                                         </span>

@@ -60,7 +60,8 @@ class KonfirmasiController extends Controller
             foreach ($peminjaman->detailPeminjaman as $detail) {
                 foreach ($detail->peminjamanUnits as $peminjamanUnit) {
                     // Cek status pengembalian dari setiap unit
-                    if (in_array($peminjamanUnit->status_pengembalian, ['rusak', 'hilang'])) {
+                    $statusPengembalian = $this->normalizeDamageStatus($peminjamanUnit->status_pengembalian);
+                    if ($this->isDamageStatus($statusPengembalian)) {
                         // Bedakan berdasarkan tipe barang
                         if (strtolower($detail->barang->tipe) === 'habis pakai') {
                             $totalHabis++;
@@ -182,7 +183,9 @@ class KonfirmasiController extends Controller
                 $jumlahRusakHilang = 0;
 
                 foreach ($detail->peminjamanUnits as $peminjamanUnit) {
-                    if ($peminjamanUnit->status_pengembalian === 'dikembalikan') {
+                    $statusPengembalian = $this->normalizeDamageStatus($peminjamanUnit->status_pengembalian);
+
+                    if ($statusPengembalian === 'dikembalikan') {
                         $jumlahDikembalikan++;
 
                         // Update status unit barang ke tersedia (baik)
@@ -190,13 +193,13 @@ class KonfirmasiController extends Controller
                             'status' => 'baik',
                             'keterangan' => null
                         ]);
-                    } elseif (in_array($peminjamanUnit->status_pengembalian, ['rusak', 'hilang'])) {
+                    } elseif ($this->isDamageStatus($statusPengembalian)) {
                         // Rusak atau hilang
                         $jumlahRusakHilang++;
 
                         // Update status unit barang sesuai kondisi
                         $peminjamanUnit->barangUnit->update([
-                            'status' => $peminjamanUnit->status_pengembalian,
+                            'status' => $statusPengembalian,
                             'keterangan' => $peminjamanUnit->keterangan_kondisi
                         ]);
                     }
@@ -277,5 +280,24 @@ class KonfirmasiController extends Controller
         });
 
         return back()->with('danger', 'Pengembalian ditolak. Status peminjaman, unit, dan data telah dikembalikan seperti semula.');
+    }
+
+    private function normalizeDamageStatus(?string $status): ?string
+    {
+        if ($status === null) {
+            return null;
+        }
+
+        $map = [
+            'rusak' => 'rusak_ringan',
+            'hilang' => 'rusak_berat',
+        ];
+
+        return $map[$status] ?? $status;
+    }
+
+    private function isDamageStatus(?string $status): bool
+    {
+        return in_array($status, ['rusak_ringan', 'rusak_berat'], true);
     }
 }

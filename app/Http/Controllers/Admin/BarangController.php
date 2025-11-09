@@ -25,7 +25,7 @@ class BarangController extends Controller
     {
         $search = $request->input('search');
         $tipe = $request->input('tipe'); // Ambil input filter tipe
-        $query = Barang::query();
+        $query = Barang::withCount('units');
 
         // Terapkan filter pencarian jika ada
         if ($search) {
@@ -56,21 +56,14 @@ class BarangController extends Controller
     {
         $request->validate([
             'nama_barang' => 'required|string|max:255',
+            'kode_barang' => 'required|string|max:255|unique:barangs,kode_barang',
             'tipe' => 'required|in:Habis Pakai,Tidak Habis Pakai',
             'stok' => 'required|integer|min:0',
             'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'deskripsi' => 'nullable|string',
         ]);
 
-        // Membuat Kode Barang Otomatis
-        $lastBarang = Barang::orderBy('id', 'desc')->first();
-        if ($lastBarang) {
-            $lastNumber = (int) substr($lastBarang->kode_barang, 1);
-            $newNumber = $lastNumber + 1;
-        } else {
-            $newNumber = 1;
-        }
-        $newKodeBarang = 'A' . str_pad($newNumber, 2, '0', STR_PAD_LEFT);
+        $kodeBarang = $request->kode_barang;
 
         $path = null;
         if ($request->hasFile('gambar')) {
@@ -80,11 +73,11 @@ class BarangController extends Controller
             $path = $request->file('gambar')->store('barang', 'public');
         }
 
-        DB::transaction(function () use ($request, $newKodeBarang, $path) {
+        DB::transaction(function () use ($request, $kodeBarang, $path) {
             // Buat barang
             $barang = Barang::create([
                 'nama_barang' => $request->nama_barang,
-                'kode_barang' => $newKodeBarang,
+                'kode_barang' => $kodeBarang,
                 'tipe' => $request->tipe,
                 'stok' => $request->stok,
                 'gambar' => $path,
@@ -96,7 +89,7 @@ class BarangController extends Controller
                 for ($i = 1; $i <= $request->stok; $i++) {
                     BarangUnit::create([
                         'barang_id' => $barang->id,
-                        'unit_code' => $newKodeBarang . '-' . str_pad($i, 3, '0', STR_PAD_LEFT),
+                        'unit_code' => $kodeBarang . '-' . str_pad($i, 3, '0', STR_PAD_LEFT),
                         'status' => 'baik',
                         'keterangan' => null,
                     ]);
