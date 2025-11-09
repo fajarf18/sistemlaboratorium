@@ -25,7 +25,7 @@
                 
                 <div class="flex flex-col items-center mb-6">
                     <img src="{{ asset('images/logo.jpeg') }}" alt="Logo STIKes" class="w-20 h-20 mb-4">
-                    <h1 class="text-xl font-bold text-slate-800 text-center">Sistem Manajemen Laboratorium STIKes Budiluhur</h1>
+                    <h1 class="text-xl font-bold text-slate-800 text-center">Sistem Informasi Manajemen Peminjaman Pengembalian Alat Laboratorium Skills</h1>
                     <p class="text-sm text-slate-500 mt-1">Mohon Login Terlebih Dahulu</p>
                 </div>
 
