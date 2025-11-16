@@ -203,7 +203,7 @@ class TransactionSeeder extends Seeder
 
                 $unitReturns = $detailData['unit_returns'];
                 $jumlah = count($unitReturns);
-                $jumlahHilang = $detailData['jumlah_hilang'] ?? count(array_filter(
+                $jumlahHilang = $detailData['jumlah_rusak'] ?? count(array_filter(
                     $unitReturns,
                     fn ($unit) => $unit['status'] === 'rusak_berat'
                 ));
@@ -212,7 +212,7 @@ class TransactionSeeder extends Seeder
                     'peminjaman_id' => $peminjaman->id,
                     'barang_id' => $barang->id,
                     'jumlah' => $jumlah,
-                    'jumlah_hilang' => $jumlahHilang,
+                    'jumlah_rusak' => $jumlahHilang,
                 ]);
 
                 foreach ($unitReturns as $unitReturn) {
@@ -242,7 +242,7 @@ class TransactionSeeder extends Seeder
                     'user_id' => $user->id,
                     'tanggal_kembali' => $returnDate->toDateString(),
                     'status_pengembalian' => $template['history']['status_pengembalian'],
-                    'deskripsi_kehilangan' => $template['history']['deskripsi'] ?? null,
+                    'deskripsi_kerusakan' => $template['history']['deskripsi'] ?? null,
                     'gambar_bukti' => $template['history']['gambar_bukti'] ?? null,
                 ]);
             }

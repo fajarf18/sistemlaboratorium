@@ -127,7 +127,7 @@ class HistoryPeminjamanExport implements FromQuery, WithHeadings, WithMapping, W
             $peminjaman->final_status_pengembalian ?? '-',
             !empty($unitRusak) ? implode(', ', $unitRusak) : '-',
             // Hilang dihapus
-            $peminjaman->history->deskripsi_kehilangan ?? '-',
+            $peminjaman->history->deskripsi_kerusakan ?? '-',
         ];
     }
 

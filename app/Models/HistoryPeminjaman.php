@@ -24,7 +24,7 @@ class HistoryPeminjaman extends Model
         'user_id', 
         'tanggal_kembali', 
         'status_pengembalian', 
-        'deskripsi_kehilangan', 
+        'deskripsi_kerusakan', 
         'gambar_bukti'
     ];
 }

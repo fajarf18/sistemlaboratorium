@@ -73,8 +73,10 @@ class KonfirmasiController extends Controller
             }
 
             // Langkah 2: Tentukan status berdasarkan hasil perhitungan
-            if ($totalHilang > 0) $statusParts[] = 'Hilang';
-            if ($totalHabis > 0) $statusParts[] = 'Habis';
+            if ($totalHilang > 0) $statusParts[] = 'Rusak';
+            // NOTE: Unit habis pakai yang berkurang tidak menyebabkan status pengembalian menjadi "Habis" atau "Rusak".
+            // Konsumable ("Habis Pakai") yang berkurang akan dihapus dari unit dan mengurangi stok, tetapi
+            // tidak mempengaruhi status pengembalian keseluruhan (dibiarkan sebagai "Aman" kecuali ada rusak non-konsumable atau terlambat).
 
             // Langkah 3: Evaluasi kondisi "Terlambat"
             if ($peminjaman->tanggal_kembali) {
@@ -195,18 +197,30 @@ class KonfirmasiController extends Controller
                         ]);
                     } elseif ($this->isDamageStatus($statusPengembalian)) {
                         // Rusak atau hilang
-                        $jumlahRusakHilang++;
+                        // Jika barang ini adalah jenis "Habis Pakai", perlakukan unit yang berkurang sebagai
+                        // "digunakan" -> hapus unit master dan kurangi stok, tetapi jangan hitung sebagai rusak/hilang
+                        if (strtolower($detail->barang->tipe) === 'habis pakai') {
+                            // Hapus unit master yang dipakai (jika ada)
+                            if ($peminjamanUnit->barangUnit) {
+                                // Hapus unit langsung (melewati controller) dan kurangi stok di tabel barang
+                                $peminjamanUnit->barangUnit->delete();
+                                $detail->barang->decrement('stok', 1);
+                            }
+                        } else {
+                            // Non-konsumable: perlakukan sebagai rusak/hilang seperti biasa
+                            $jumlahRusakHilang++;
 
-                        // Update status unit barang sesuai kondisi
-                        $peminjamanUnit->barangUnit->update([
-                            'status' => $statusPengembalian,
-                            'keterangan' => $peminjamanUnit->keterangan_kondisi
-                        ]);
+                            // Update status unit barang sesuai kondisi
+                            $peminjamanUnit->barangUnit->update([
+                                'status' => $statusPengembalian,
+                                'keterangan' => $peminjamanUnit->keterangan_kondisi
+                            ]);
+                        }
                     }
                 }
 
-                // Update jumlah_hilang di detail peminjaman untuk history
-                $detail->jumlah_hilang = $jumlahRusakHilang;
+                // Update jumlah_rusak di detail peminjaman untuk history
+                $detail->jumlah_rusak = $jumlahRusakHilang;
                 $detail->save();
 
                 // Tambahkan stok untuk unit yang dikembalikan baik saja
@@ -236,10 +250,10 @@ class KonfirmasiController extends Controller
         DB::transaction(function () use ($peminjaman) {
             // Reset status unit yang sudah diubah
             foreach ($peminjaman->detailPeminjaman as $detail) {
-                // Reset jumlah_hilang jika ada
-                if (isset($detail->jumlah_hilang) && $detail->jumlah_hilang > 0) {
-                    $detail->jumlah += $detail->jumlah_hilang;
-                    $detail->jumlah_hilang = 0;
+                // Reset jumlah_rusak jika ada
+                if (isset($detail->jumlah_rusak) && $detail->jumlah_rusak > 0) {
+                    $detail->jumlah += $detail->jumlah_rusak;
+                    $detail->jumlah_rusak = 0;
                     $detail->save();
                 }
 

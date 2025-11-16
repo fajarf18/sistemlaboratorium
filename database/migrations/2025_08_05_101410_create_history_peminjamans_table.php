@@ -17,7 +17,7 @@ public function up(): void
         $table->foreignId('user_id')->constrained();
         $table->date('tanggal_kembali');
         $table->string('status_pengembalian'); // Aman / Hilang
-        $table->text('deskripsi_kehilangan')->nullable();
+        $table->text('deskripsi_kerusakan')->nullable();
         $table->string('gambar_bukti')->nullable();
         $table->timestamps();
     });

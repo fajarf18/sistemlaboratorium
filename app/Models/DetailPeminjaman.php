@@ -15,7 +15,7 @@ class DetailPeminjaman extends Model
         'peminjaman_id',
         'barang_id',
         'jumlah',
-        'jumlah_hilang',
+        'jumlah_rusak',
     ];
 
     public function barang()

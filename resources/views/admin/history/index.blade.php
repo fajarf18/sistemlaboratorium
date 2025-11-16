@@ -225,10 +225,10 @@
                     </div>
 
                     {{-- Deskripsi Kehilangan (hanya tampil jika ada) --}}
-                    <template x-if="previewItem.history && previewItem.history.deskripsi_kehilangan">
+                    <template x-if="previewItem.history && previewItem.history.deskripsi_kerusakan">
                         <div>
                             <h4 class="font-semibold text-md mb-1">Alasan Kehilangan:</h4>
-                            <p class="text-sm p-3 bg-gray-50 border rounded-md" x-text="previewItem.history.deskripsi_kehilangan"></p>
+                            <p class="text-sm p-3 bg-gray-50 border rounded-md" x-text="previewItem.history.deskripsi_kerusakan"></p>
                         </div>
                     </template>
                     <template x-if="previewItem.history && previewItem.history.gambar_bukti">

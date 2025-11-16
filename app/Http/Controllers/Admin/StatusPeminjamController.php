@@ -100,7 +100,7 @@ class StatusPeminjamController extends Controller
                 'user_id' => $peminjaman->user_id,
                 'tanggal_kembali' => now(),
                 'status_pengembalian' => 'Aman',
-                'deskripsi_kehilangan' => 'Diselesaikan oleh admin',
+                'deskripsi_kerusakan' => 'Diselesaikan oleh admin',
             ]);
 
             DB::commit();

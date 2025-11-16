@@ -171,7 +171,7 @@
                                             <li x-text="`Terlambat ${detail.hari_terlambat} hari.`"></li>
                                         </template>
                                         <template x-if="detail.total_hilang && detail.total_hilang > 0">
-                                            <li x-text="`Kehilangan ${detail.total_hilang} unit barang.`"></li>
+                                            <li x-text="`Kerusakan ${detail.total_hilang} unit barang.`"></li>
                                         </template>
                                         <template x-if="detail.total_habis && detail.total_habis > 0">
                                             <li x-text="`Barang habis pakai digunakan: ${detail.total_habis} unit.`"></li>

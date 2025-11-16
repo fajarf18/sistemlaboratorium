@@ -14,8 +14,8 @@ return new class extends Migration
     public function up()
     {
         Schema::table('detail_peminjamans', function (Blueprint $table) {
-            // Menambahkan kolom jumlah_hilang setelah kolom jumlah
-            $table->integer('jumlah_hilang')->default(0)->after('jumlah');
+            // Menambahkan kolom jumlah_rusak setelah kolom jumlah
+            $table->integer('jumlah_rusak')->default(0)->after('jumlah');
         });
     }
 
@@ -27,7 +27,7 @@ return new class extends Migration
     public function down()
     {
         Schema::table('detail_peminjamans', function (Blueprint $table) {
-            $table->dropColumn('jumlah_hilang');
+            $table->dropColumn('jumlah_rusak');
         });
     }
 };

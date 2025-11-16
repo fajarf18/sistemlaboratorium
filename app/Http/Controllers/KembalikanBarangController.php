@@ -136,7 +136,7 @@ class KembalikanBarangController extends Controller
             if ($adaBarangRusakHilang && $isTerlambat) {
                 $statusPengembalian = 'Rusak dan Terlambat';
             } elseif ($adaBarangRusakHilang) {
-                $statusPengembalian = 'Rusak/Hilang';
+                $statusPengembalian = 'Rusak';
             } elseif ($isTerlambat) {
                 $statusPengembalian = 'Terlambat';
             }
@@ -147,7 +147,7 @@ class KembalikanBarangController extends Controller
                 'user_id' => $userId,
                 'tanggal_kembali' => $request->tanggal_kembali,
                 'status_pengembalian' => $statusPengembalian,
-                'deskripsi_kehilangan' => $adaBarangRusakHilang ? 'Ada unit rusak, lihat detail unit' : null,
+                'deskripsi_kerusakan' => $adaBarangRusakHilang ? 'Ada unit rusak, lihat detail unit' : null,
                 'gambar_bukti' => $imagePath,
             ]);
 
