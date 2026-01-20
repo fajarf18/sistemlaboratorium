@@ -35,7 +35,7 @@ class HistoryPeminjamanExport implements FromQuery, WithHeadings, WithMapping, W
     {
         $query = Peminjaman::with([
             'user',
-            'dosenPengampu',
+            'dosen',
             'detailPeminjaman.barang',
             'detailPeminjaman.peminjamanUnits.barangUnit',
             'history'
@@ -99,14 +99,29 @@ class HistoryPeminjamanExport implements FromQuery, WithHeadings, WithMapping, W
         $unitHilang = [];
 
         foreach ($peminjaman->detailPeminjaman as $detail) {
-            $jumlahUnit = $detail->peminjamanUnits->count();
-            $totalUnits += $jumlahUnit;
-            $barangList[] = $detail->barang->nama_barang . ' (' . $jumlahUnit . ' unit)';
+            if (strtolower($detail->barang->tipe) === 'habis pakai') {
+                $dipinjam = (int) $detail->jumlah;
+                $terpakai = (int) $detail->jumlah_rusak;
+                $dikembalikan = max(0, $dipinjam - $terpakai);
 
-            // Kumpulkan unit yang rusak (kedua tipe)
-            foreach ($detail->peminjamanUnits as $peminjamanUnit) {
-                if ($peminjamanUnit->barangUnit && in_array($peminjamanUnit->status_pengembalian, ['rusak_ringan', 'rusak_berat'])) {
-                    $unitRusak[] = $peminjamanUnit->barangUnit->unit_code . ' (' . $detail->barang->nama_barang . ')';
+                $totalUnits += $dipinjam;
+                $barangList[] = sprintf(
+                    '%s (pinjam %d, kembali %d, terpakai %d)',
+                    $detail->barang->nama_barang,
+                    $dipinjam,
+                    $dikembalikan,
+                    $terpakai
+                );
+            } else {
+                $jumlahUnit = $detail->peminjamanUnits->count();
+                $totalUnits += $jumlahUnit;
+                $barangList[] = $detail->barang->nama_barang . ' (' . $jumlahUnit . ' unit)';
+
+                // Kumpulkan unit yang rusak (kedua tipe)
+                foreach ($detail->peminjamanUnits as $peminjamanUnit) {
+                    if ($peminjamanUnit->barangUnit && in_array($peminjamanUnit->status_pengembalian, ['rusak_ringan', 'rusak_berat'])) {
+                        $unitRusak[] = $peminjamanUnit->barangUnit->unit_code . ' (' . $detail->barang->nama_barang . ')';
+                    }
                 }
             }
         }
@@ -117,8 +132,8 @@ class HistoryPeminjamanExport implements FromQuery, WithHeadings, WithMapping, W
             $peminjaman->user->nama ?? '-',
             $peminjaman->user->email ?? '-',
             $peminjaman->user->nomor_wa ?? '-',
-            $peminjaman->dosenPengampu->nama ?? '-',
-            $peminjaman->dosenPengampu->mata_kuliah ?? '-',
+            $peminjaman->dosen->nama ?? '-',
+            $peminjaman->dosen->prodi ?? '-',
             Carbon::parse($peminjaman->tanggal_pinjam)->format('d/m/Y'),
             Carbon::parse($peminjaman->tanggal_wajib_kembali)->format('d/m/Y'),
             Carbon::parse($peminjaman->tanggal_kembali)->format('d/m/Y'),

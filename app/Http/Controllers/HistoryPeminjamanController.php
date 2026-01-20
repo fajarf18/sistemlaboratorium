@@ -14,7 +14,7 @@ class HistoryPeminjamanController extends Controller
     public function index()
     {
         // Ambil semua data peminjaman milik user yang sedang login dengan relasi history
-        $historyPeminjamans = Peminjaman::with('history', 'dosenPengampu', 'detailPeminjamans.peminjamanUnits')
+        $historyPeminjamans = Peminjaman::with('history', 'dosen', 'detailPeminjamans.peminjamanUnits')
             ->where('user_id', Auth::id())
             ->latest('tanggal_pinjam')
             ->get();
@@ -35,7 +35,7 @@ class HistoryPeminjamanController extends Controller
         // Cari data peminjaman berdasarkan ID dan pastikan milik user yang login.
         // Load semua relasi yang dibutuhkan termasuk unit-unit individual
         $peminjaman = Peminjaman::with([
-            'dosenPengampu',
+            'dosen',
             'detailPeminjaman.barang',
             'detailPeminjaman.peminjamanUnits.barangUnit',
             'history'

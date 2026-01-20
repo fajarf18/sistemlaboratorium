@@ -67,11 +67,11 @@
                 </div>
                 <div class="bg-white bg-opacity-10 rounded-lg p-3">
                     <p class="text-blue-100 text-xs mb-1">Total Unit Dipinjam</p>
-                    <p class="font-semibold text-lg" x-text="allUnits.length + ' unit'"></p>
+                    <p class="font-semibold text-lg" x-text="totalItemBorrowed + ' unit'"></p>
                 </div>
             </div>
 
-                <button @click="cekBarang" :disabled="allUnits.length === 0"
+                <button @click="cekBarang" :disabled="totalItemBorrowed === 0"
                         class="px-4 md:px-6 py-2.5 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition shadow-lg disabled:bg-gray-300 disabled:text-gray-500 flex items-center justify-center gap-2 w-full md:w-auto">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
@@ -98,50 +98,162 @@
                                 <h3 class="font-bold text-lg text-gray-800" x-text="detail.barang.nama_barang"></h3>
                                 <div class="flex items-center gap-2 mt-1">
                                     <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full" x-text="detail.barang.tipe"></span>
-                                    <span class="text-sm text-gray-600" x-text="`${detail.peminjaman_units.length} unit`"></span>
+                                    <span class="text-sm text-gray-600" x-text="detail.barang.tipe.toLowerCase() === 'habis pakai' ? `${detail.jumlah} unit` : `${detail.peminjaman_units.length} unit`"></span>
                                 </div>
                             </div>
                         </div>
-                        {{-- Mini Stats --}}
-                        <div class="flex gap-2 flex-wrap mt-3 md:mt-0">
-                            <div class="text-center px-2 py-1 bg-green-50 rounded-lg flex-1 md:flex-none min-w-[70px]">
-                                <p class="text-xs text-gray-600">Baik</p>
-                                <p class="text-base md:text-lg font-bold text-green-600" x-text="getStatusCountForDetail(detail, 'dikembalikan')"></p>
+                        {{-- Mini Stats hanya untuk non-konsumabel --}}
+                        <template x-if="detail.barang.tipe.toLowerCase() !== 'habis pakai'">
+                            <div class="flex gap-2 flex-wrap mt-3 md:mt-0">
+                                <div class="text-center px-2 py-1 bg-green-50 rounded-lg flex-1 md:flex-none min-w-[70px]">
+                                    <p class="text-xs text-gray-600">Baik</p>
+                                    <p class="text-base md:text-lg font-bold text-green-600" x-text="getStatusCountForDetail(detail, 'dikembalikan')"></p>
+                                </div>
+                                <div class="text-center px-2 py-1 bg-yellow-50 rounded-lg flex-1 md:flex-none min-w-[90px]">
+                                    <p class="text-xs text-gray-600">Rusak Ringan</p>
+                                    <p class="text-base md:text-lg font-bold text-yellow-600" x-text="getStatusCountForDetail(detail, 'rusak_ringan')"></p>
+                                </div>
+                                <div class="text-center px-2 py-1 bg-yellow-100 rounded-lg flex-1 md:flex-none min-w-[90px]">
+                                    <p class="text-xs text-gray-600">Rusak Berat</p>
+                                    <p class="text-base md:text-lg font-bold text-yellow-800" x-text="getStatusCountForDetail(detail, 'rusak_berat')"></p>
+                                </div>
                             </div>
-                            <div class="text-center px-2 py-1 bg-yellow-50 rounded-lg flex-1 md:flex-none min-w-[90px]">
-                                <p class="text-xs text-gray-600">Rusak Ringan</p>
-                                <p class="text-base md:text-lg font-bold text-yellow-600" x-text="getStatusCountForDetail(detail, 'rusak_ringan')"></p>
-                            </div>
-                            <div class="text-center px-2 py-1 bg-yellow-100 rounded-lg flex-1 md:flex-none min-w-[90px]">
-                                <p class="text-xs text-gray-600">Rusak Berat</p>
-                                <p class="text-base md:text-lg font-bold text-yellow-800" x-text="getStatusCountForDetail(detail, 'rusak_berat')"></p>
-                            </div>
-                        </div>
+                        </template>
                     </div>
                 </div>
 
                 {{-- Card Body - Table (Desktop) & Cards (Mobile) --}}
-                <div class="p-4 md:p-6">
-                    {{-- Desktop Table View --}}
-                    <div class="hidden md:block overflow-x-auto">
-                        <table class="w-full">
-                            <thead>
-                                <tr class="border-b-2 border-gray-200">
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Kode Unit</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Keterangan</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Foto Kondisi</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200">
+                <div class="p-4 md:p-6 space-y-4">
+                    <template x-if="detail.barang.tipe.toLowerCase() === 'habis pakai'">
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-blue-800 font-semibold">Barang Habis Pakai</p>
+                                    <p class="text-xs text-blue-700">Masukkan jumlah sisa yang dikembalikan ke gudang</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-gray-500">Dipinjam</p>
+                                    <p class="text-lg font-bold text-gray-800" x-text="detail.jumlah + ' unit'"></p>
+                                </div>
+                            </div>
+                            <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1.5">Jumlah Sisa</label>
+                                    <input type="number"
+                                           class="w-full border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                           min="0"
+                                           :max="detail.jumlah"
+                                           x-model.number="consumableReturns[detail.id].jumlah_sisa"
+                                           placeholder="Masukkan jumlah sisa">
+                                    <p class="text-xs text-gray-500 mt-1">Nilai 0 berarti semua habis.</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500">Terpakai/Habis</p>
+                                    <p class="text-lg font-semibold text-red-600" x-text="consumableUsed(detail) + ' unit'"></p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500">Kembali ke Stok</p>
+                                    <p class="text-lg font-semibold text-green-600" x-text="(consumableReturns[detail.id]?.jumlah_sisa ?? 0) + ' unit'"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template x-if="detail.barang.tipe.toLowerCase() !== 'habis pakai'">
+                        <div>
+                            {{-- Desktop Table View --}}
+                            <div class="hidden md:block overflow-x-auto">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr class="border-b-2 border-gray-200">
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Kode Unit</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Keterangan</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Foto Kondisi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200">
+                                        <template x-for="unit in detail.peminjaman_units" :key="unit.id">
+                                            <tr class="hover:bg-gray-50 transition-colors">
+                                                <td class="px-4 py-4">
+                                                    <span class="font-mono text-sm font-semibold text-gray-700" x-text="unit.barang_unit.unit_code"></span>
+                                                </td>
+                                                <td class="px-4 py-4">
+                                                    <select x-model="unitStatuses[unit.id].status"
+                                                            class="text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full"
+                                                            :class="{
+                                                                'bg-green-50 text-green-700 border-green-300': unitStatuses[unit.id].status === 'dikembalikan',
+                                                                'bg-yellow-50 text-yellow-700 border-yellow-300': unitStatuses[unit.id].status === 'rusak_ringan',
+                                                                'bg-yellow-100 text-yellow-800 border-yellow-300': unitStatuses[unit.id].status === 'rusak_berat'
+                                                            }">
+                                                        <option value="dikembalikan">✓ Dikembalikan Baik</option>
+                                                        <option value="rusak_ringan">⚠ Rusak Ringan</option>
+                                                        <option value="rusak_berat">⚠ Rusak Berat</option>
+                                                    </select>
+                                                </td>
+                                                <td class="px-4 py-4">
+                                                    <template x-if="unitStatuses[unit.id].status !== 'dikembalikan'">
+                                                        <input type="text"
+                                                               x-model="unitStatuses[unit.id].keterangan"
+                                                               placeholder="Jelaskan kondisi barang..."
+                                                               class="w-full text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
+                                                    </template>
+                                                    <template x-if="unitStatuses[unit.id].status === 'dikembalikan'">
+                                                        <span class="text-gray-400 text-sm">-</span>
+                                                    </template>
+                                                </td>
+                                                <td class="px-4 py-4">
+                                                    <template x-if="unitStatuses[unit.id].status !== 'dikembalikan'">
+                                                        <div>
+                                                            <label class="cursor-pointer">
+                                                                <div class="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700">
+                                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                                    </svg>
+                                                                    <span x-text="unitStatuses[unit.id].foto ? 'Ganti Foto' : 'Upload Foto'"></span>
+                                                                </div>
+                                                                <input type="file" @change="handleUnitPhoto($event, unit.id)" accept="image/*" class="hidden">
+                                                            </label>
+                                                            <template x-if="unitStatuses[unit.id].foto">
+                                                                <div class="mt-2 relative inline-block">
+                                                                    <img :src="unitStatuses[unit.id].foto" class="w-24 h-24 object-cover rounded-lg border-2 border-gray-200">
+                                                                    <button @click="unitStatuses[unit.id].foto = null"
+                                                                            type="button"
+                                                                            class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600">
+                                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                                        </svg>
+                                                                    </button>
+                                                                </div>
+                                                            </template>
+                                                        </div>
+                                                    </template>
+                                                    <template x-if="unitStatuses[unit.id].status === 'dikembalikan'">
+                                                        <span class="text-gray-400 text-sm">-</span>
+                                                    </template>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {{-- Mobile Card View --}}
+                            <div class="md:hidden space-y-3">
                                 <template x-for="unit in detail.peminjaman_units" :key="unit.id">
-                                    <tr class="hover:bg-gray-50 transition-colors">
-                                        <td class="px-4 py-4">
-                                            <span class="font-mono text-sm font-semibold text-gray-700" x-text="unit.barang_unit.unit_code"></span>
-                                        </td>
-                                        <td class="px-4 py-4">
+                                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                        {{-- Kode Unit --}}
+                                        <div class="flex items-center justify-between mb-3 pb-3 border-b border-gray-200">
+                                            <span class="text-xs font-semibold text-gray-500 uppercase">Kode Unit</span>
+                                            <span class="font-mono text-sm font-bold text-gray-700" x-text="unit.barang_unit.unit_code"></span>
+                                        </div>
+
+                                        {{-- Status --}}
+                                        <div class="mb-3">
+                                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Status</label>
                                             <select x-model="unitStatuses[unit.id].status"
-                                                    class="text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full"
+                                                    class="w-full text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                                                     :class="{
                                                         'bg-green-50 text-green-700 border-green-300': unitStatuses[unit.id].status === 'dikembalikan',
                                                         'bg-yellow-50 text-yellow-700 border-yellow-300': unitStatuses[unit.id].status === 'rusak_ringan',
@@ -151,123 +263,52 @@
                                                 <option value="rusak_ringan">⚠ Rusak Ringan</option>
                                                 <option value="rusak_berat">⚠ Rusak Berat</option>
                                             </select>
-                                        </td>
-                                        <td class="px-4 py-4">
-                                            <template x-if="unitStatuses[unit.id].status !== 'dikembalikan'">
+                                        </div>
+
+                                        {{-- Keterangan --}}
+                                        <template x-if="unitStatuses[unit.id].status !== 'dikembalikan'">
+                                            <div class="mb-3">
+                                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Keterangan</label>
                                                 <input type="text"
                                                        x-model="unitStatuses[unit.id].keterangan"
                                                        placeholder="Jelaskan kondisi barang..."
                                                        class="w-full text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
-                                            </template>
-                                            <template x-if="unitStatuses[unit.id].status === 'dikembalikan'">
-                                                <span class="text-gray-400 text-sm">-</span>
-                                            </template>
-                                        </td>
-                                        <td class="px-4 py-4">
-                                            <template x-if="unitStatuses[unit.id].status !== 'dikembalikan'">
-                                                <div>
-                                                    <label class="cursor-pointer">
-                                                        <div class="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700">
-                                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                            </svg>
-                                                            <span x-text="unitStatuses[unit.id].foto ? 'Ganti Foto' : 'Upload Foto'"></span>
-                                                        </div>
-                                                        <input type="file" @change="handleUnitPhoto($event, unit.id)" accept="image/*" class="hidden">
-                                                    </label>
-                                                    <template x-if="unitStatuses[unit.id].foto">
-                                                        <div class="mt-2 relative inline-block">
-                                                            <img :src="unitStatuses[unit.id].foto" class="w-24 h-24 object-cover rounded-lg border-2 border-gray-200">
-                                                            <button @click="unitStatuses[unit.id].foto = null"
-                                                                    type="button"
-                                                                    class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600">
-                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                                                </svg>
-                                                            </button>
-                                                        </div>
-                                                    </template>
-                                                </div>
-                                            </template>
-                                            <template x-if="unitStatuses[unit.id].status === 'dikembalikan'">
-                                                <span class="text-gray-400 text-sm">-</span>
-                                            </template>
-                                        </td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {{-- Mobile Card View --}}
-                    <div class="md:hidden space-y-3">
-                        <template x-for="unit in detail.peminjaman_units" :key="unit.id">
-                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                                {{-- Kode Unit --}}
-                                <div class="flex items-center justify-between mb-3 pb-3 border-b border-gray-200">
-                                    <span class="text-xs font-semibold text-gray-500 uppercase">Kode Unit</span>
-                                    <span class="font-mono text-sm font-bold text-gray-700" x-text="unit.barang_unit.unit_code"></span>
-                                </div>
-
-                                {{-- Status --}}
-                                <div class="mb-3">
-                                    <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Status</label>
-                                    <select x-model="unitStatuses[unit.id].status"
-                                            class="w-full text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                                            :class="{
-                                                'bg-green-50 text-green-700 border-green-300': unitStatuses[unit.id].status === 'dikembalikan',
-                                                'bg-yellow-50 text-yellow-700 border-yellow-300': unitStatuses[unit.id].status === 'rusak_ringan',
-                                                'bg-yellow-100 text-yellow-800 border-yellow-300': unitStatuses[unit.id].status === 'rusak_berat'
-                                            }">
-                                        <option value="dikembalikan">✓ Dikembalikan Baik</option>
-                                        <option value="rusak_ringan">⚠ Rusak Ringan</option>
-                                        <option value="rusak_berat">⚠ Rusak Berat</option>
-                                    </select>
-                                </div>
-
-                                {{-- Keterangan --}}
-                                <template x-if="unitStatuses[unit.id].status !== 'dikembalikan'">
-                                    <div class="mb-3">
-                                        <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Keterangan</label>
-                                        <input type="text"
-                                               x-model="unitStatuses[unit.id].keterangan"
-                                               placeholder="Jelaskan kondisi barang..."
-                                               class="w-full text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
-                                    </div>
-                                </template>
-
-                                {{-- Foto Kondisi --}}
-                                <template x-if="unitStatuses[unit.id].status !== 'dikembalikan'">
-                                    <div>
-                                        <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Foto Kondisi</label>
-                                        <label class="cursor-pointer">
-                                            <div class="flex items-center justify-center gap-2 text-sm text-blue-600 hover:text-blue-700 bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg py-3 px-4">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                </svg>
-                                                <span x-text="unitStatuses[unit.id].foto ? 'Ganti Foto' : 'Upload Foto'"></span>
                                             </div>
-                                            <input type="file" @change="handleUnitPhoto($event, unit.id)" accept="image/*" class="hidden">
-                                        </label>
-                                        <template x-if="unitStatuses[unit.id].foto">
-                                            <div class="mt-3 relative inline-block">
-                                                <img :src="unitStatuses[unit.id].foto" class="w-32 h-32 object-cover rounded-lg border-2 border-gray-300 shadow-sm">
-                                                <button @click="unitStatuses[unit.id].foto = null"
-                                                        type="button"
-                                                        class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-red-600 shadow-md">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                                    </svg>
-                                                </button>
+                                        </template>
+
+                                        {{-- Foto Kondisi --}}
+                                        <template x-if="unitStatuses[unit.id].status !== 'dikembalikan'">
+                                            <div>
+                                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Foto Kondisi</label>
+                                                <label class="cursor-pointer">
+                                                    <div class="flex items-center justify-center gap-2 text-sm text-blue-600 hover:text-blue-700 bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg py-3 px-4">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                        </svg>
+                                                        <span x-text="unitStatuses[unit.id].foto ? 'Ganti Foto' : 'Upload Foto'"></span>
+                                                    </div>
+                                                    <input type="file" @change="handleUnitPhoto($event, unit.id)" accept="image/*" class="hidden">
+                                                </label>
+                                                <template x-if="unitStatuses[unit.id].foto">
+                                                    <div class="mt-3 relative inline-block">
+                                                        <img :src="unitStatuses[unit.id].foto" class="w-32 h-32 object-cover rounded-lg border-2 border-gray-300 shadow-sm">
+                                                        <button @click="unitStatuses[unit.id].foto = null"
+                                                                type="button"
+                                                                class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-red-600 shadow-md">
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                </template>
                                             </div>
                                         </template>
                                     </div>
                                 </template>
                             </div>
-                        </template>
-                    </div>
+                        </div>
+                    </template>
                 </div>
             </div>
         </template>
@@ -293,6 +334,7 @@
             <form action="{{ route('user.kembalikan.konfirmasi') }}" method="POST" enctype="multipart/form-data" @submit="isProcessing = true">
             @csrf
             <input type="hidden" name="unit_statuses" :value="JSON.stringify(unitStatuses)">
+            <input type="hidden" name="consumable_returns" :value="JSON.stringify(consumableReturns)">
 
                 {{-- Modal Header --}}
                 <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-4 sm:p-6 rounded-t-xl sm:rounded-t-2xl sticky top-0 z-10">
@@ -393,6 +435,18 @@
                                 <p class="text-xl sm:text-2xl font-bold text-yellow-800" x-text="unitsRusakBerat"></p>
                             </div>
                         </div>
+                        <template x-if="totalConsumableBorrowed > 0">
+                            <div class="mt-3 grid grid-cols-2 gap-3">
+                                <div class="bg-white p-4 rounded-lg border border-green-200">
+                                    <p class="text-xs text-gray-600 font-medium mb-1">Habis Pakai Kembali</p>
+                                    <p class="text-xl font-bold text-green-600" x-text="totalConsumableReturned + ' unit'"></p>
+                                </div>
+                                <div class="bg-white p-4 rounded-lg border border-red-200">
+                                    <p class="text-xs text-gray-600 font-medium mb-1">Habis Pakai Terpakai</p>
+                                    <p class="text-xl font-bold text-red-600" x-text="totalConsumableUsed + ' unit'"></p>
+                                </div>
+                            </div>
+                        </template>
                     </div>
 
                     {{-- Form Fields --}}
@@ -470,9 +524,17 @@
         const details = detailPeminjamans.map(d => ({...d}));
         const allUnits = [];
         const initialStatuses = {};
+        const consumableReturns = {};
+        let totalConsumableBorrowed = 0;
 
-        // Initialize unit statuses
+        // Initialize unit statuses dan jumlah sisa habis pakai
         details.forEach(detail => {
+            if (detail.barang.tipe && detail.barang.tipe.toLowerCase() === 'habis pakai') {
+                consumableReturns[detail.id] = { jumlah_sisa: detail.jumlah };
+                totalConsumableBorrowed += detail.jumlah;
+                return;
+            }
+
             detail.peminjaman_units.forEach(unit => {
                 allUnits.push(unit);
                 initialStatuses[unit.id] = {
@@ -486,6 +548,8 @@
         return {
             details: details,
             allUnits: allUnits,
+            consumableReturns: consumableReturns,
+            totalConsumableBorrowed: totalConsumableBorrowed,
             unitStatuses: initialStatuses,
             showModal: false,
             tanggalPinjam: details.length > 0 ? details[0].peminjaman.tanggal_pinjam : '',
@@ -521,6 +585,23 @@
                     status: this.unitStatuses[unit.id].status,
                     keterangan: this.unitStatuses[unit.id].keterangan
                 }));
+            },
+
+            get totalItemBorrowed() {
+                return this.allUnits.length + this.totalConsumableBorrowed;
+            },
+
+            get totalConsumableReturned() {
+                return Object.values(this.consumableReturns).reduce((acc, val) => acc + (Number(val?.jumlah_sisa) || 0), 0);
+            },
+
+            get totalConsumableUsed() {
+                return Math.max(0, this.totalConsumableBorrowed - this.totalConsumableReturned);
+            },
+
+            consumableUsed(detail) {
+                const sisa = Number(this.consumableReturns[detail.id]?.jumlah_sisa) || 0;
+                return Math.max(0, detail.jumlah - sisa);
             },
 
             handleUnitPhoto(event, unitId) {

@@ -145,4 +145,26 @@ class Barang extends Model
 
         return $this->units()->count();
     }
+
+    /**
+     * Helper untuk mengecek apakah barang adalah tipe habis pakai.
+     */
+    public function isConsumable(): bool
+    {
+        return strtolower($this->tipe) === 'habis pakai';
+    }
+
+    /**
+     * Stok yang bisa dipinjam (stok fisik untuk habis pakai, stok unit baik untuk non-konsumabel).
+     */
+    public function getStokPinjamAttribute(): int
+    {
+        if ($this->isConsumable()) {
+            // Untuk habis pakai, batasi stok pinjam dengan stok fisik dan jumlah unit baik
+            $stokUnitBaik = $this->units()->where('status', 'baik')->count();
+            return min((int) $this->stok, (int) $stokUnitBaik);
+        }
+
+        return (int) $this->stok_baik;
+    }
 }

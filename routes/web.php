@@ -14,8 +14,11 @@ use App\Http\Controllers\Admin\BarangUnitController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\KonfirmasiController;
 use App\Http\Controllers\Admin\HistoryController;
-use App\Http\Controllers\Auth\OtpController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Dosen\DashboardController as DosenDashboardController;
+use App\Http\Controllers\Dosen\KelasPraktikumController as DosenKelasPraktikumController;
+use App\Http\Controllers\Dosen\KonfirmasiController as DosenKonfirmasiController;
+use App\Http\Controllers\KelasPraktikumController;
 
 Route::middleware('guest')->group(function () {
     // Rute untuk Lupa Password
@@ -27,11 +30,6 @@ Route::middleware('guest')->group(function () {
     
     Route::get('reset-password', [ForgotPasswordController::class, 'showResetForm'])->name('password.reset.form');
     Route::post('reset-password', [ForgotPasswordController::class, 'resetPassword'])->name('password.update.new');
-
-    Route::get('verify-otp', [OtpController::class, 'showOtpForm'])->name('otp.form');
-    Route::post('verify-otp', [OtpController::class, 'verifyOtp'])->name('otp.verify');
-    Route::post('resend-otp', [OtpController::class, 'resendOtp'])->name('otp.resend'); 
-    // Rute untuk tamu (landing page)
 });
 Route::get('/', function () {
     return redirect()->route('login');
@@ -42,6 +40,9 @@ Route::get('/dashboard', function () {
     $user = auth()->user();
     if ($user->role === 'admin') {
         return redirect()->route('admin.dashboard');
+    }
+    if ($user->role === 'dosen') {
+        return redirect()->route('dosen.dashboard');
     }
     if ($user->role === 'user') {
         return redirect()->route('user.dashboard');
@@ -72,18 +73,12 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::delete('barang-units/{unit}', [BarangUnitController::class, 'destroy'])->name('barang.units.destroy');
 
     // Rute untuk manajemen modul
-    Route::resource('modul', App\Http\Controllers\Admin\ModulController::class);
 
-    // Rute untuk manajemen dosen pengampu
-    Route::resource('dosen-pengampu', App\Http\Controllers\Admin\DosenPengampuController::class)->only([
-        'index', 'store', 'update', 'destroy'
-    ]);
+
+
 
     //Pengaturan pengguna
     Route::get('users/download', [UserController::class, 'download'])->name('users.download');
-    Route::resource('users', UserController::class)->only(['index', 'update', 'destroy']);
-    Route::resource('users', UserController::class)->only(['index']);
-    Route::resource('users', UserController::class)->only(['index', 'update']);
     Route::resource('users', UserController::class)->only(['index', 'update', 'destroy']);
 Route::get('/konfirmasi', [KonfirmasiController::class, 'index'])->name('konfirmasi.index');
     Route::get('/konfirmasi/{id}', [KonfirmasiController::class, 'show'])->name('konfirmasi.show');
@@ -116,9 +111,13 @@ Route::middleware('auth')->prefix('user')->name('user.')->group(function () {
         Route::delete('/keranjang/{id}', [KeranjangController::class, 'destroy'])->name('keranjang.destroy');
         Route::post('/checkout', [KeranjangController::class, 'checkout'])->name('checkout.process');
 
-        // Rute untuk modul praktikum
-        Route::get('/modul', [App\Http\Controllers\ModulController::class, 'index'])->name('modul.index');
-        Route::post('/modul/{id}/add-to-cart', [App\Http\Controllers\ModulController::class, 'addToCart'])->name('modul.addToCart');
+
+        
+        // Rute untuk kelas praktikum
+        Route::get('/kelas-praktikum', [KelasPraktikumController::class, 'index'])->name('kelas-praktikum.index');
+        Route::get('/kelas-praktikum/{id}', [KelasPraktikumController::class, 'show'])->name('kelas-praktikum.show');
+        Route::post('/kelas-praktikum/{id}/join', [KelasPraktikumController::class, 'joinKelas'])->name('kelas-praktikum.join');
+        Route::post('/kelas-praktikum/{id}/leave', [KelasPraktikumController::class, 'leaveKelas'])->name('kelas-praktikum.leave');
     });
 
     Route::get('/rincian-pinjaman', [RincianPinjamanController::class, 'index'])->name('peminjaman.rincian');
@@ -126,8 +125,6 @@ Route::middleware('auth')->prefix('user')->name('user.')->group(function () {
     Route::post('/kembalikan-barang/konfirmasi', [KembalikanBarangController::class, 'konfirmasi'])->name('kembalikan.konfirmasi');
     Route::get('/history-peminjaman', [HistoryPeminjamanController::class, 'index'])->name('history.index');
     Route::get('/history-peminjaman/detail/{id}', [HistoryPeminjamanController::class, 'show'])->name('history.show');
-    Route::get('verify-otp', [OtpController::class, 'showOtpForm'])->name('otp.form');
-    Route::post('verify-otp', [OtpController::class, 'verifyOtp'])->name('otp.verify');
 });
 
 // Rute profil (bawaan Breeze)
@@ -146,5 +143,14 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // Rute Baru Untuk Halaman Barang
     Route::get('/barang', [BarangController::class, 'index'])->name('barang.index');
 });
+
+// Rute untuk Dosen
+// Rute untuk Dosen
+Route::middleware(['auth', 'verified', 'dosen'])->prefix('dosen')->name('dosen.')->group(function () {
+    Route::get('/dashboard', [DosenDashboardController::class, 'index'])->name('dashboard');
+    Route::resource('kelas-praktikum', DosenKelasPraktikumController::class);
+    Route::resource('modul', \App\Http\Controllers\Dosen\ModulController::class);
+});
+
 // File rute autentikasi
 require __DIR__.'/auth.php';

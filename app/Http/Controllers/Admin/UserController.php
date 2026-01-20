@@ -80,6 +80,15 @@ class UserController extends Controller
             return back()->with('error', 'Admin tidak dapat dihapus.');
         }
 
+        // Cek peminjaman aktif: Menunggu Konfirmasi, Dipinjam, atau Tunggu Konfirmasi Admin
+        $hasActiveLoans = $user->peminjamans()
+            ->whereIn('status', ['Menunggu Konfirmasi', 'Dipinjam', 'Tunggu Konfirmasi Admin'])
+            ->exists();
+
+        if ($hasActiveLoans) {
+            return back()->with('error', 'Pengguna tidak dapat dihapus karena masih memiliki peminjaman aktif.');
+        }
+
         // ================= LOGIKA PENGHAPUSAN BERANTAI =================
         try {
             DB::transaction(function () use ($user) {
@@ -113,7 +122,7 @@ class UserController extends Controller
     }
 
     /**
-     * Men-download data pengguna sebagai file CSV.
+     * Men-download data pengguna sebagai file Excel (desain serupa export history).
      */
     public function download(Request $request)
     {
@@ -121,49 +130,9 @@ class UserController extends Controller
         $prodi = $request->input('prodi');
         $semester = $request->input('semester');
 
-        $query = User::query()->where('role', 'user');
-        if ($search) {
-            $query->where(function($q) use ($search) {
-                $q->where('nama', 'like', '%' . $search . '%')
-                  ->orWhere('nim', 'like', '%' . $search . '%')
-                  ->orWhere('email', 'like', '%' . $search . '%')
-                  ->orWhere('nomor_wa', 'like', '%' . $search . '%');
-            });
-        }
-        if ($prodi) $query->where('prodi', $prodi);
-        if ($semester) $query->where('semester', $semester);
-
-        $users = $query->get();
-        $fileName = "data-pengguna-" . date('Y-m-d') . ".csv";
-
-        $headers = [
-            "Content-type"        => "text/csv",
-            "Content-Disposition" => "attachment; filename=$fileName",
-            "Pragma"              => "no-cache",
-            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-            "Expires"             => "0"
-        ];
-
-        $columns = ['NIM', 'Nama', 'Email', 'Nomor WA', 'Prodi', 'Semester', 'Tanggal Daftar'];
-
-        $callback = function() use($users, $columns) {
-            $file = fopen('php://output', 'w');
-            fputcsv($file, $columns);
-
-            foreach ($users as $user) {
-                fputcsv($file, [
-                    $user->nim,
-                    $user->nama,
-                    $user->email,
-                    $user->nomor_wa ?? '-',
-                    $user->prodi,
-                    $user->semester,
-                    $user->created_at->format('d/m/Y')
-                ]);
-            }
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\UsersExport($search, $prodi, $semester),
+            'data-pengguna-' . date('Y-m-d-His') . '.xlsx'
+        );
     }
 }

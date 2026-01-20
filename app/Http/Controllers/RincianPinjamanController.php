@@ -10,7 +10,7 @@ class RincianPinjamanController extends Controller
 {
     public function index()
     {
-        $peminjamans = Peminjaman::with('detailPeminjamans.barang', 'dosenPengampu')
+        $peminjamans = Peminjaman::with('detailPeminjamans.barang', 'dosen')
             ->where('user_id', Auth::id())
             ->where('status', '!=', 'Dikembalikan')
             ->latest()

@@ -10,8 +10,16 @@ class Modul extends Model
         'nama_modul',
         'deskripsi',
         'kode_modul',
-        'is_active'
+        'is_active',
+        'user_id',
+        'jam_mulai',
+        'jam_selesai'
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     protected $casts = [
         'is_active' => 'boolean'

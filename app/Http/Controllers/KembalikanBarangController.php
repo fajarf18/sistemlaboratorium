@@ -40,14 +40,20 @@ class KembalikanBarangController extends Controller
         $request->validate([
             'tanggal_kembali' => 'required|date',
             'gambar_bukti' => 'nullable|image|max:2048',
-            'unit_statuses' => 'required|json',
+            'unit_statuses' => 'nullable|json',
+            'consumable_returns' => 'nullable|json',
         ]);
 
-        $unitStatuses = json_decode($request->unit_statuses, true);
+        $unitStatuses = json_decode($request->unit_statuses ?? '[]', true) ?? [];
+        $consumableReturns = json_decode($request->consumable_returns ?? '[]', true) ?? [];
+
+        if (!is_array($unitStatuses) || !is_array($consumableReturns)) {
+            return back()->with('error', 'Data pengembalian tidak valid.');
+        }
 
         // Validasi format unit statuses
-        if (!is_array($unitStatuses) || empty($unitStatuses)) {
-            return back()->with('error', 'Data status unit tidak valid. Harap pilih status untuk semua unit.');
+        if (empty($unitStatuses) && empty($consumableReturns)) {
+            return back()->with('error', 'Tidak ada data pengembalian yang dikirim.');
         }
 
         // Validasi setiap status unit
@@ -68,11 +74,52 @@ class KembalikanBarangController extends Controller
             }
         }
 
+        // Validasi input barang habis pakai (jumlah sisa)
+        $consumableDetailIds = array_keys($consumableReturns);
+        $consumableDetails = [];
+        if (!empty($consumableDetailIds)) {
+            $consumableDetails = DetailPeminjaman::with(['barang', 'peminjaman'])
+                ->whereIn('id', $consumableDetailIds)
+                ->whereHas('peminjaman', function ($q) {
+                    $q->where('user_id', Auth::id())->where('status', 'Dipinjam');
+                })
+                ->get()
+                ->keyBy('id');
+        }
+
+        foreach ($consumableReturns as $detailId => $data) {
+            // Terima bentuk legacy angka langsung atau array dengan key jumlah_sisa
+            if (is_numeric($data)) {
+                $data = ['jumlah_sisa' => $data];
+                $consumableReturns[$detailId] = $data;
+            }
+
+            $detail = $consumableDetails[$detailId] ?? null;
+            if (!$detail) {
+                return back()->with('error', 'Data pengembalian habis pakai tidak ditemukan.');
+            }
+
+            if (!$detail->barang->isConsumable()) {
+                return back()->with('error', 'Barang "' . $detail->barang->nama_barang . '" bukan tipe habis pakai.');
+            }
+
+            $jumlahSisa = isset($data['jumlah_sisa']) ? (int) $data['jumlah_sisa'] : -1;
+            if ($jumlahSisa < 0) {
+                return back()->with('error', 'Jumlah sisa untuk "' . $detail->barang->nama_barang . '" tidak boleh negatif.');
+            }
+            if ($jumlahSisa > $detail->jumlah) {
+                return back()->with('error', 'Jumlah sisa "' . $detail->barang->nama_barang . '" melebihi jumlah yang dipinjam.');
+            }
+        }
+
         $userId = Auth::id();
         $isTerlambat = false;
         $peminjamanUntukNotifikasi = null;
         $peminjamanIdsToUpdate = [];
         $adaBarangRusakHilang = false;
+        $adaRusakRingan = false;
+        $adaRusakBerat = false;
+        $consumableSummary = [];
 
         DB::beginTransaction();
         try {
@@ -102,6 +149,11 @@ class KembalikanBarangController extends Controller
                 // Jika rusak, simpan foto dan keterangan
                 if ($this->isDamagedStatus($statusData['status'])) {
                     $adaBarangRusakHilang = true;
+                    if ($statusData['status'] === 'rusak_ringan') {
+                        $adaRusakRingan = true;
+                    } elseif ($statusData['status'] === 'rusak_berat') {
+                        $adaRusakBerat = true;
+                    }
                     $peminjamanUnit->keterangan_kondisi = $statusData['keterangan'] ?? null;
 
                     // Upload foto kondisi jika ada
@@ -116,6 +168,35 @@ class KembalikanBarangController extends Controller
 
                 $peminjamanUnit->save();
             }
+
+            if (!$peminjamanUntukNotifikasi && !empty($consumableReturns)) {
+                // Ambil salah satu peminjaman dari detail habis pakai
+                $peminjamanUntukNotifikasi = $consumableDetails[array_key_first($consumableReturns)]->peminjaman ?? null;
+            }
+
+            // Simpan data pengembalian barang habis pakai (jumlah sisa)
+            foreach ($consumableReturns as $detailId => $data) {
+                if (is_numeric($data)) {
+                    $data = ['jumlah_sisa' => $data];
+                }
+
+                $detail = $consumableDetails[$detailId];
+
+                if (!$peminjamanUntukNotifikasi) {
+                    $peminjamanUntukNotifikasi = $detail->peminjaman;
+                }
+                $peminjamanIdsToUpdate[] = $detail->peminjaman_id;
+
+                $jumlahSisa = (int) $data['jumlah_sisa'];
+                $jumlahTerpakai = max(0, $detail->jumlah - $jumlahSisa);
+
+                // Simpan jumlah yang terpakai di kolom jumlah_rusak sebagai penanda "habis"
+                $detail->jumlah_rusak = $jumlahTerpakai;
+                $detail->save();
+
+                // Catat ringkasan untuk history
+                $consumableSummary[] = $detail->barang->nama_barang . ': pinjam ' . $detail->jumlah . ', kembali ' . $jumlahSisa . ', terpakai ' . $jumlahTerpakai;
+            }
             
             if (!empty($peminjamanIdsToUpdate)) {
                 Peminjaman::whereIn('id', array_unique($peminjamanIdsToUpdate))
@@ -123,6 +204,10 @@ class KembalikanBarangController extends Controller
                         'status' => 'Tunggu Konfirmasi Admin',
                         'tanggal_kembali' => $request->tanggal_kembali
                     ]);
+            }
+
+            if (!$peminjamanUntukNotifikasi) {
+                throw new \Exception('Peminjaman tidak ditemukan untuk pengembalian.');
             }
 
             $tanggalKembaliCarbon = Carbon::parse($request->tanggal_kembali);
@@ -133,13 +218,22 @@ class KembalikanBarangController extends Controller
             }
 
             $statusPengembalian = 'Aman';
-            if ($adaBarangRusakHilang && $isTerlambat) {
-                $statusPengembalian = 'Rusak dan Terlambat';
-            } elseif ($adaBarangRusakHilang) {
-                $statusPengembalian = 'Rusak';
-            } elseif ($isTerlambat) {
-                $statusPengembalian = 'Terlambat';
+            $statusParts = [];
+            if ($adaRusakRingan) $statusParts[] = 'Rusak Ringan';
+            if ($adaRusakBerat) $statusParts[] = 'Rusak Berat';
+            if ($isTerlambat) $statusParts[] = 'Terlambat';
+            if (empty($statusParts)) $statusParts[] = 'Aman';
+            $statusPengembalian = implode(' dan ', $statusParts);
+
+            // Susun deskripsi history agar mencatat habis pakai
+            $historyNotes = [];
+            if ($adaBarangRusakHilang) {
+                $historyNotes[] = 'Ada unit rusak, lihat detail unit';
             }
+            if (!empty($consumableSummary)) {
+                $historyNotes[] = 'Habis pakai -> ' . implode(' | ', $consumableSummary);
+            }
+            $historyDescription = !empty($historyNotes) ? implode(' || ', $historyNotes) : null;
 
             // Buat history record
             HistoryPeminjaman::create([
@@ -147,7 +241,7 @@ class KembalikanBarangController extends Controller
                 'user_id' => $userId,
                 'tanggal_kembali' => $request->tanggal_kembali,
                 'status_pengembalian' => $statusPengembalian,
-                'deskripsi_kerusakan' => $adaBarangRusakHilang ? 'Ada unit rusak, lihat detail unit' : null,
+                'deskripsi_kerusakan' => $historyDescription,
                 'gambar_bukti' => $imagePath,
             ]);
 

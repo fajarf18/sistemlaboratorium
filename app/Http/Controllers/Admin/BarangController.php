@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Barang;
 use App\Models\BarangUnit;
+use App\Models\Peminjaman;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Storage;
@@ -178,6 +179,23 @@ class BarangController extends Controller
      */
     public function destroy(Barang $barang)
     {
+        // Larang hapus jika ada peminjaman aktif yang melibatkan barang ini
+        $hasActiveLoan = Peminjaman::whereIn('status', ['Menunggu Konfirmasi', 'Dipinjam', 'Tunggu Konfirmasi Admin'])
+            ->whereHas('detailPeminjaman', function ($q) use ($barang) {
+                $q->where('barang_id', $barang->id);
+            })
+            ->exists();
+
+        if ($hasActiveLoan) {
+            return back()->with('error', 'Barang tidak dapat dihapus karena terdapat peminjaman aktif pada barang ini.');
+        }
+
+        // Larang hapus jika ada unit yang masih berstatus dipinjam
+        $hasBorrowedUnit = $barang->units()->where('status', 'dipinjam')->exists();
+        if ($hasBorrowedUnit) {
+            return back()->with('error', 'Barang tidak dapat dihapus karena ada unit yang sedang dipinjam.');
+        }
+
         DB::transaction(function () use ($barang) {
             // Hapus gambar dari storage jika ada
             if ($barang->gambar) {

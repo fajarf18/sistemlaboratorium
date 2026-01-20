@@ -73,9 +73,12 @@
                                 <td class="p-4 text-gray-800 font-medium">{{ $peminjaman->user->nama }}</td>
                                 <td class="p-4 text-gray-500">{{ $peminjaman->user->nim }}</td>
                                 <td class="p-4 text-gray-500">
-                                    @if($peminjaman->dosenPengampu)
-                                        <div class="font-medium text-gray-900">{{ $peminjaman->dosenPengampu->nama }}</div>
-                                        <div class="text-xs text-gray-500">{{ $peminjaman->dosenPengampu->mata_kuliah ?? '-' }}</div>
+                                    @if($peminjaman->dosen)
+                                        <div class="font-medium text-gray-900">{{ $peminjaman->dosen->nama }}</div>
+                                        <div class="text-xs text-gray-500">{{ $peminjaman->dosen->prodi ?? '-' }}</div>
+                                    @elseif($peminjaman->kelasPraktikum && $peminjaman->kelasPraktikum->modul)
+                                        <div class="font-medium text-gray-900">{{ $peminjaman->kelasPraktikum->modul->user->nama ?? '-' }}</div>
+                                        <div class="text-xs text-blue-500">Kelas: {{ $peminjaman->kelasPraktikum->nama_kelas }}</div>
                                     @else
                                         <span class="text-gray-400 italic">-</span>
                                     @endif
@@ -139,8 +142,8 @@
                         </div>
                         <div>
                             <p class="text-gray-500">Dosen Pengampu</p>
-                            <p class="font-semibold" x-text="detailItem.dosen_pengampu?.nama || '-'"></p>
-                            <p class="text-xs text-gray-500" x-text="detailItem.dosen_pengampu?.mata_kuliah || ''"></p>
+                            <p class="font-semibold" x-text="detailItem.dosen?.nama || '-'"></p>
+                            <p class="text-xs text-gray-500" x-text="detailItem.dosen?.prodi || ''"></p>
                         </div>
                         <div>
                             <p class="text-gray-500">Status</p>

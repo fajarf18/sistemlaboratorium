@@ -31,9 +31,12 @@
                 <tr class="bg-white border-b hover:bg-gray-50">
                     <td class="px-6 py-4 align-middle">{{ \Carbon\Carbon::parse($history->tanggal_pinjam)->format('d F Y') }}</td>
                     <td class="px-6 py-4 align-middle">
-                        @if($history->dosenPengampu)
-                            <div class="font-medium text-gray-900">{{ $history->dosenPengampu->nama }}</div>
-                            <div class="text-xs text-gray-500">{{ $history->dosenPengampu->mata_kuliah ?? '-' }}</div>
+                        @if($history->dosen)
+                            <div class="font-medium text-gray-900">{{ $history->dosen->nama }}</div>
+                            <div class="text-xs text-gray-500">{{ $history->dosen->prodi ?? '-' }}</div>
+                        @elseif($history->kelasPraktikum && $history->kelasPraktikum->modul)
+                            <div class="font-medium text-gray-900">{{ $history->kelasPraktikum->modul->user->nama ?? '-' }}</div>
+                            <div class="text-xs text-blue-500">Kelas: {{ $history->kelasPraktikum->nama_kelas }}</div>
                         @else
                             <span class="text-gray-400 italic">-</span>
                         @endif
@@ -115,8 +118,8 @@
                     </div>
                     <div>
                         <p class="text-sm text-gray-500">Dosen Pengampu</p>
-                        <p class="font-semibold" x-text="detail.dosen_pengampu ? detail.dosen_pengampu.nama : '-'"></p>
-                        <p class="text-xs text-gray-500" x-text="detail.dosen_pengampu?.mata_kuliah || ''"></p>
+                        <p class="font-semibold" x-text="detail.dosen ? detail.dosen.nama : '-'"></p>
+                        <p class="text-xs text-gray-500" x-text="detail.dosen?.prodi || ''"></p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-500">Tanggal Kembali</p>

@@ -14,14 +14,21 @@ class Peminjaman extends Model
 
     protected $fillable = [
         'user_id',
-        'dosen_pengampu_id',
+        'user_id',
+        'dosen_id',
+        'kelas_praktikum_id',
         'tanggal_pinjam',
         'tanggal_wajib_kembali',
         'tanggal_kembali',
         'status',
+        'dosen_konfirmasi_at',
     ];
 
     protected $appends = ['final_status_pengembalian'];
+
+    protected $casts = [
+        'dosen_konfirmasi_at' => 'datetime',
+    ];
 
     public function detailPeminjaman()
     {
@@ -43,9 +50,17 @@ class Peminjaman extends Model
         return $this->hasOne(HistoryPeminjaman::class);
     }
 
-    public function dosenPengampu()
+    public function dosen()
     {
-        return $this->belongsTo(DosenPengampu::class);
+        return $this->belongsTo(User::class, 'dosen_id');
+    }
+
+    /**
+     * Relasi ke kelas praktikum
+     */
+    public function kelasPraktikum()
+    {
+        return $this->belongsTo(KelasPraktikum::class);
     }
 
     public function getFinalStatusPengembalianAttribute(): string
@@ -109,5 +124,13 @@ class Peminjaman extends Model
 
         return Carbon::parse($this->tanggal_kembali)
             ->greaterThan(Carbon::parse($this->tanggal_wajib_kembali));
+    }
+
+    /**
+     * Cek apakah peminjaman sudah dikonfirmasi dosen
+     */
+    public function sudahDikonfirmasiDosen(): bool
+    {
+        return !is_null($this->dosen_konfirmasi_at);
     }
 }

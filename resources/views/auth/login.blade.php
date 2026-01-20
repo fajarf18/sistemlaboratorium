@@ -75,11 +75,6 @@
                         </button>
                     </div>
 
-                    <div class="text-center pt-2">
-                        <span class="text-sm font-medium">Belum punya akun? </span><a class="text-sm font-medium text-blue-600 hover:text-blue-500" href="{{ route('register') }}">
-                             Daftar di sini
-                        </a>
-                    </div>
                 </form>
             </div>
         </div>

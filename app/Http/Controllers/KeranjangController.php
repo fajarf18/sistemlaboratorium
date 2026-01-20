@@ -8,7 +8,7 @@ use App\Models\Keranjang;
 use App\Models\Peminjaman;
 use App\Models\DetailPeminjaman;
 use App\Models\PeminjamanUnit;
-use App\Models\DosenPengampu;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -22,12 +22,12 @@ class KeranjangController extends Controller
      */
     public function index()
     {
-        $keranjangItems = Keranjang::with('barang')
+        $keranjangItems = Keranjang::with('barang', 'kelasPraktikum', 'dosen')
             ->where('user_id', Auth::id())
             ->get();
 
-        // Ambil dosen pengampu yang aktif
-        $dosens = DosenPengampu::where('is_active', true)->get();
+        // Ambil dosen pengampu yang aktif (User dengan role dosen)
+        $dosens = User::where('role', 'dosen')->get();
 
         return view('user.keranjang', compact('keranjangItems', 'dosens'));
     }
@@ -45,8 +45,8 @@ class KeranjangController extends Controller
         $barang = Barang::findOrFail($request->barang_id);
         $userId = Auth::id();
 
-        // Cek stok yang available (hanya yang baik)
-        $stokTersedia = $barang->stok_baik;
+        // Cek stok yang available (stok fisik untuk habis pakai, stok unit baik untuk lainnya)
+        $stokTersedia = $barang->stok_pinjam;
 
         if ($request->jumlah > $stokTersedia) {
             return back()->with('error', 'Jumlah peminjaman melebihi stok barang yang tersedia. Stok baik: ' . $stokTersedia);
@@ -81,8 +81,8 @@ class KeranjangController extends Controller
         $request->validate(['jumlah' => 'required|integer|min:1']);
         $keranjangItem = Keranjang::where('id', $id)->where('user_id', Auth::id())->firstOrFail();
         
-        $stokBaikTersedia = $keranjangItem->barang->stok_baik;
-        if ($request->jumlah > $stokBaikTersedia) {
+        $stokTersedia = $keranjangItem->barang->stok_pinjam;
+        if ($request->jumlah > $stokTersedia) {
             return back()->with('error', 'Jumlah melebihi stok tersedia (baik).');
         }
 
@@ -107,10 +107,9 @@ class KeranjangController extends Controller
     {
         $request->validate([
             'items' => 'required|json',
-            'dosen_pengampu_id' => 'required|exists:dosen_pengampus,id',
+            'dosen_id' => 'nullable|exists:users,id',
         ], [
-            'dosen_pengampu_id.required' => 'Silakan pilih dosen pengampu terlebih dahulu.',
-            'dosen_pengampu_id.exists' => 'Dosen pengampu yang dipilih tidak valid.',
+            'dosen_id.exists' => 'Dosen pengampu yang dipilih tidak valid.',
         ]);
 
         $selectedItemIds = json_decode($request->items);
@@ -119,27 +118,51 @@ class KeranjangController extends Controller
             return back()->with('error', 'Tidak ada barang yang dipilih untuk checkout.');
         }
 
-        $itemsInCart = Keranjang::with('barang')
+        $itemsInCart = Keranjang::with('barang', 'dosen')
             ->where('user_id', Auth::id())
             ->whereIn('id', $selectedItemIds)
             ->get();
 
         DB::beginTransaction();
         try {
-            // Validasi stok baik tersedia untuk semua item
+            // Validasi stok tersedia untuk semua item
             foreach ($itemsInCart as $item) {
-                $stokBaikTersedia = $item->barang->stok_baik;
-                if ($item->jumlah > $stokBaikTersedia) {
-                    throw new \Exception('Stok baik untuk barang "' . $item->barang->nama_barang . '" tidak mencukupi. Tersedia: ' . $stokBaikTersedia);
+                $stokTersedia = $item->barang->stok_pinjam;
+                if ($item->jumlah > $stokTersedia) {
+                    throw new \Exception('Stok untuk barang "' . $item->barang->nama_barang . '" tidak mencukupi. Tersedia: ' . $stokTersedia);
                 }
             }
 
+            // Determine dosen_id
+            $dosenId = $request->dosen_id;
+            if (!$dosenId) {
+                $itemDenganDosen = $itemsInCart->firstWhere('dosen_id');
+                if ($itemDenganDosen) {
+                    $dosenId = $itemDenganDosen->dosen_id;
+                }
+            }
+
+            // Tentukan kelas_praktikum_id jika ada item dari kelas
+            $kelasPraktikumId = null;
+            $itemDariKelas = $itemsInCart->firstWhere('kelas_praktikum_id');
+            if ($itemDariKelas) {
+                $kelasPraktikumId = $itemDariKelas->kelas_praktikum_id;
+            }
+
+            // Cek apakah dosen punya user_id (akun login)
+            // Logic lama memeriksa DosenPengampu. Sekarang Dosen adalah User itu sendiri.
+            // Kita sudah punya $dosenId yang merupakan ID dari User (Dosen).
+            // Jadi validasi tambahan mungkin hanya memastikan user tersebut exist dan role-nya dosen.
+            // Namun karena foreign key constraint, ini sudah aman.
+
             $peminjaman = Peminjaman::create([
                 'user_id' => Auth::id(),
-                'dosen_pengampu_id' => $request->dosen_pengampu_id,
+                'dosen_id' => $dosenId,
+                'kelas_praktikum_id' => $kelasPraktikumId,
                 'tanggal_pinjam' => now(),
                 'tanggal_wajib_kembali' => now()->addDays(3),
                 'status' => 'Menunggu Konfirmasi',
+                'dosen_konfirmasi_at' => null, // Akan diisi jika dosen approve
             ]);
 
             foreach ($itemsInCart as $item) {
@@ -150,20 +173,36 @@ class KeranjangController extends Controller
                 ]);
 
                 // Assign unit-unit baik yang tersedia
-                $availableUnits = BarangUnit::where('barang_id', $item->barang_id)
-                    ->where('status', 'baik')
-                    ->limit($item->jumlah)
-                    ->get();
+                if ($item->barang->isConsumable()) {
+                    $availableUnits = BarangUnit::where('barang_id', $item->barang_id)
+                        ->where('status', 'baik')
+                        ->limit($item->jumlah)
+                        ->get();
 
-                foreach ($availableUnits as $unit) {
-                    PeminjamanUnit::create([
-                        'detail_peminjaman_id' => $detailPeminjaman->id,
-                        'barang_unit_id' => $unit->id,
-                        'status_pengembalian' => 'belum',
-                    ]);
+                    if ($availableUnits->count() < $item->jumlah) {
+                        throw new \Exception('Unit baik untuk barang "' . $item->barang->nama_barang . '" tidak mencukupi.');
+                    }
+
+                    // Tandai unit sebagai dipinjam (tanpa membuat peminjaman_units)
+                    foreach ($availableUnits as $unit) {
+                        $unit->update(['status' => 'dipinjam']);
+                    }
+                } else {
+                    $availableUnits = BarangUnit::where('barang_id', $item->barang_id)
+                        ->where('status', 'baik')
+                        ->limit($item->jumlah)
+                        ->get();
+
+                    foreach ($availableUnits as $unit) {
+                        PeminjamanUnit::create([
+                            'detail_peminjaman_id' => $detailPeminjaman->id,
+                            'barang_unit_id' => $unit->id,
+                            'status_pengembalian' => 'belum',
+                        ]);
+                    }
                 }
 
-                // Mengurangi stok barang (total stok)
+                // Mengurangi stok barang (stok fisik untuk habis pakai, total stok untuk lainnya)
                 $item->barang->decrement('stok', $item->jumlah);
 
                 // Hapus item dari keranjang

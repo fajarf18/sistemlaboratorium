@@ -55,11 +55,45 @@ protected $fillable = [
         ];
     }
     public function keranjangs()
-{
-    return $this->hasMany(Keranjang::class);
-}
- public function peminjamans()
+    {
+        return $this->hasMany(Keranjang::class);
+    }
+
+    public function peminjamans()
     {
         return $this->hasMany(Peminjaman::class);
+    }
+
+
+
+    /**
+     * Relasi ke kelas praktikum yang dibuat dosen
+     */
+    public function kelasPraktikumsCreated()
+    {
+        return $this->hasMany(KelasPraktikum::class, 'created_by');
+    }
+
+    /**
+     * Relasi ke kelas praktikum yang diikuti mahasiswa
+     */
+    public function kelasPraktikumsJoined()
+    {
+        return $this->belongsToMany(KelasPraktikum::class, 'kelas_praktikum_user', 'user_id', 'kelas_praktikum_id')
+                    ->withTimestamps();
+    }
+    public function moduls()
+    {
+        return $this->hasMany(Modul::class, 'user_id');
+    }
+
+    public function peminjamansAsDosen()
+    {
+        return $this->hasMany(Peminjaman::class, 'dosen_id');
+    }
+    
+    public function keranjangsAsDosen()
+    {
+        return $this->hasMany(Keranjang::class, 'dosen_id');
     }
 }

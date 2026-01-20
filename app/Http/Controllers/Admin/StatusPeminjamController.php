@@ -25,7 +25,7 @@ class StatusPeminjamController extends Controller
         // Mengambil peminjaman yang statusnya BUKAN 'Dikembalikan'
         $query = Peminjaman::with([
             'user',
-            'dosenPengampu',
+            'dosen',
             'detailPeminjamans.barang',
             'detailPeminjamans.peminjamanUnits.barangUnit'
         ])

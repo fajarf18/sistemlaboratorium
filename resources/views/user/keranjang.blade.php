@@ -4,7 +4,7 @@
 
 @section('content')
 {{-- Initialize Alpine.js. Tambahkan checkoutSuccess dari session --}}
-<div class="bg-white p-4 sm:p-6 rounded-xl shadow-lg" x-data="keranjangData({{ session('checkout_success') ? 'true' : 'false' }})">
+<div class="bg-white p-4 sm:p-6 rounded-xl shadow-lg" x-data="keranjangData({{ session('checkout_success') ? 'true' : 'false' }}, {{ $keranjangItems->mapWithKeys(function($item) { return [$item->id => ['dari_kelas' => $item->dari_kelas]]; }) }})">
     
     {{-- Notifikasi --}}
     @if (session('success'))
@@ -34,20 +34,44 @@
             </thead>
             <tbody>
                 @forelse ($keranjangItems as $item)
+                @php
+                    $stokPinjam = $item->barang->stok_pinjam;
+                @endphp
                 {{-- Tambahkan class dinamis untuk menandai baris yang stoknya kurang --}}
-                <tr class="bg-white border-b hover:bg-gray-50" :class="{ 'opacity-50 bg-red-50': {{ $item->jumlah }} > {{ $item->barang->stok_baik }} }">
+                <tr class="bg-white border-b hover:bg-gray-50" :class="{ 'opacity-50 bg-red-50': {{ $item->jumlah }} > {{ $stokPinjam }} }">
                     <td class="p-4">
-                        <input type="checkbox" value="{{ $item->id }}" x-model="selectedItems" :disabled="{{ $item->jumlah > $item->barang->stok_baik }}" class="rounded border-gray-300">
+                        <input type="checkbox" value="{{ $item->id }}" x-model="selectedItems" :disabled="{{ $item->jumlah > $stokPinjam }}" class="rounded border-gray-300">
                     </td>
                     <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-                        {{ $item->barang->nama_barang }}
-                        @if($item->jumlah > $item->barang->stok_baik)
-                            <span class="block text-xs text-red-500 font-normal">(Stok tidak mencukupi: {{ $item->barang->stok_baik }})</span>
+                        <div class="flex items-center gap-2">
+                            <span>{{ $item->barang->nama_barang }}</span>
+                            @if($item->dari_kelas && $item->kelasPraktikum)
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800" title="Dari Kelas Praktikum: {{ $item->kelasPraktikum->nama_kelas }}">
+                                    Dari Kelas
+                                </span>
+                            @endif
+                        </div>
+                        @if($item->jumlah > $stokPinjam)
+                            <span class="block text-xs text-red-500 font-normal">(Stok tidak mencukupi: {{ $stokPinjam }})</span>
                         @endif
                     </th>
                     <td class="px-6 py-4">
-                        {{-- Pastikan ada fallback jika gambar tidak ada --}}
-                        <img src="{{ optional($item->barang)->gambar ? asset('storage/' . $item->barang->gambar) : 'https://placehold.co/100' }}" alt="{{ $item->barang->nama_barang }}" class="w-12 h-12 object-cover rounded">
+                        @php
+                            $placeholderText = isset($item->barang->kode_barang)
+                                ? urlencode($item->barang->kode_barang)
+                                : 'No+Image';
+                            $fallbackUrl = "https://placehold.co/100x100/e2e8f0/334155?text={$placeholderText}";
+
+                            $gambar = $item->barang->gambar;
+                            if ($gambar) {
+                                $imgSrc = Str::startsWith($gambar, ['http://', 'https://'])
+                                    ? $gambar
+                                    : asset('storage/' . ltrim($gambar, '/'));
+                            } else {
+                                $imgSrc = $fallbackUrl;
+                            }
+                        @endphp
+                        <img src="{{ $imgSrc }}" alt="{{ $item->barang->nama_barang }}" class="w-12 h-12 object-cover rounded" onerror="this.src='{{ $fallbackUrl }}'">
                     </td>
                     <td class="px-6 py-4">{{ $item->barang->tipe }}</td>
                     <td class="px-6 py-4">
@@ -65,7 +89,7 @@
                                    name="jumlah" 
                                    value="{{ $item->jumlah }}" 
                                    min="1" 
-                                   max="{{ $item->barang->stok_baik }}" 
+                                   max="{{ $stokPinjam }}" 
                                    onchange="this.form.submit()" 
                                    class="w-16 text-center border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
                             
@@ -108,28 +132,22 @@
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
             </div>
             <h3 class="text-xl font-bold text-gray-800 text-center">Konfirmasi Checkout</h3>
-            <p class="text-gray-500 text-sm mb-4 text-center">Pilih dosen pengampu dan cek kembali barang Anda</p>
+            <p class="text-gray-500 text-sm mb-4 text-center">Cek kembali barang Anda</p>
 
             <form action="{{ route('user.checkout.process') }}" method="POST" @submit="isProcessing = true">
                 @csrf
                 <input type="hidden" name="items" :value="JSON.stringify(selectedItems)">
 
-                <div class="mb-4">
-                    <label for="dosen_pengampu_id" class="block text-sm font-medium text-gray-700 mb-2">
-                        Dosen Pengampu <span class="text-red-500">*</span>
-                    </label>
-                    <select name="dosen_pengampu_id" id="dosen_pengampu_id" required
-                            class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                        <option value="">-- Pilih Dosen Pengampu --</option>
+                <div x-show="needsDosenSelection" class="transition" x-transition>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Pilih Dosen Pengampu</label>
+                    <select name="dosen_id" class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500" 
+                            :required="needsDosenSelection" 
+                            :disabled="!needsDosenSelection">
+                        <option value="">-- Pilih Dosen --</option>
                         @foreach($dosens as $dosen)
-                            <option value="{{ $dosen->id }}">
-                                {{ $dosen->nama }} - {{ $dosen->mata_kuliah ?? 'Umum' }}
-                            </option>
+                            <option value="{{ $dosen->user_id ?? $dosen->id }}">{{ $dosen->nama }}</option>
                         @endforeach
                     </select>
-                    @error('dosen_pengampu_id')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
                 </div>
 
                 <div class="space-y-3">
@@ -161,12 +179,19 @@
 </div>
 
 <script>
-    function keranjangData(checkoutSuccess = false) {
+    function keranjangData(checkoutSuccess = false, itemsMap = {}) {
         return {
             showModal: false,
             checkoutSuccess: checkoutSuccess,
             selectedItems: [],
+            itemsMap: itemsMap,
             isProcessing: false,
+            
+            get needsDosenSelection() {
+                // If any chosen item is NOT from class, we show the dropdown
+                return this.selectedItems.some(id => !this.itemsMap[id]?.dari_kelas);
+            },
+
             toggleAll(checked) {
                 let validItems = [];
                 if (checked) {

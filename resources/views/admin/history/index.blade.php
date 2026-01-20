@@ -102,9 +102,12 @@
                                 <td class="p-4 text-gray-800 font-medium">{{ $history->user->nama }}</td>
                                 <td class="p-4 text-gray-500">{{ $history->user->nim }}</td>
                                 <td class="p-4 text-gray-500">
-                                    @if($history->dosenPengampu)
-                                        <div class="font-medium text-gray-900">{{ $history->dosenPengampu->nama }}</div>
-                                        <div class="text-xs text-gray-500">{{ $history->dosenPengampu->mata_kuliah ?? '-' }}</div>
+                                    @if($history->dosen)
+                                        <div class="font-medium text-gray-900">{{ $history->dosen->nama }}</div>
+                                        <div class="text-xs text-gray-500">{{ $history->dosen->prodi ?? '-' }}</div>
+                                    @elseif($history->kelasPraktikum && $history->kelasPraktikum->modul)
+                                        <div class="font-medium text-gray-900">{{ $history->kelasPraktikum->modul->user->nama ?? '-' }}</div>
+                                        <div class="text-xs text-blue-500">Kelas: {{ $history->kelasPraktikum->nama_kelas }}</div>
                                     @else
                                         <span class="text-gray-400 italic">-</span>
                                     @endif
@@ -207,16 +210,21 @@
                                         <th class="px-4 py-2 text-center font-semibold text-gray-600">Detail Units</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <template x-for="item in previewItem.detail_peminjaman" :key="item.id">
-                                        <tr class="border-t">
-                                            <td class="px-4 py-2 text-gray-800" x-text="item.barang.nama_barang"></td>
-                                            <td class="px-4 py-2 text-center text-gray-600" x-text="(item.peminjaman_units?.length ?? 0) + ' unit'"></td>
-                                            <td class="px-4 py-2 text-center">
-                                                <button @click="openUnitsModal(item)" class="px-3 py-1 text-xs font-medium text-white bg-purple-500 rounded hover:bg-purple-600">
-                                                    View Units
-                                                </button>
-                                            </td>
+                                    <tbody>
+                                        <template x-for="item in previewItem.detail_peminjaman" :key="item.id">
+                                            <tr class="border-t">
+                                                <td class="px-4 py-2 text-gray-800">
+                                                    <div class="font-semibold" x-text="item.barang.nama_barang"></div>
+                                                    <div class="text-xs text-gray-500" x-text="item.barang.tipe"></div>
+                                                </td>
+                                                <td class="px-4 py-2 text-center text-gray-600">
+                                                    <span x-text="item.barang.tipe.toLowerCase() === 'habis pakai' ? `${item.jumlah} unit (pinjam)` : `${item.peminjaman_units?.length ?? 0} unit`"></span>
+                                                </td>
+                                                <td class="px-4 py-2 text-center">
+                                                    <button @click="openUnitsModal(item)" class="px-3 py-1 text-xs font-medium text-white bg-purple-500 rounded hover:bg-purple-600">
+                                                        View Units
+                                                    </button>
+                                                </td>
                                         </tr>
                                     </template>
                                 </tbody>
@@ -251,7 +259,8 @@
                 <div x-show="isUnitsModalOpen" class="inline-block w-full max-w-3xl p-6 my-8 overflow-hidden text-left transition-all transform bg-white rounded-lg shadow-xl">
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="text-lg font-semibold text-gray-800">
-                            Detail Units - <span x-text="selectedItem?.barang?.nama_barang"></span>
+                            <span x-text="selectedItem?.barang?.tipe?.toLowerCase() === 'habis pakai' ? 'Ringkasan Habis Pakai' : 'Detail Units'"></span>
+                            - <span x-text="selectedItem?.barang?.nama_barang"></span>
                         </h2>
                         <button @click="isUnitsModalOpen = false" class="text-gray-600 hover:text-gray-800">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -260,6 +269,19 @@
                         </button>
                     </div>
 
+                    <template x-if="selectedItem?.barang?.tipe?.toLowerCase() === 'habis pakai'">
+                        <div class="p-4 border rounded-lg bg-blue-50">
+                            <p class="text-sm text-gray-700">Barang habis pakai tidak memiliki detail unit. Ringkasan:</p>
+                            <ul class="mt-2 text-sm text-gray-800 space-y-1">
+                                <li><strong>Dipinjam:</strong> <span x-text="selectedItem?.jumlah ?? 0"></span> unit</li>
+                                <li><strong>Dikembalikan:</strong> <span x-text="(selectedItem?.jumlah ?? 0) - (selectedItem?.jumlah_rusak ?? 0)"></span> unit</li>
+                                <li><strong>Terpakai:</strong> <span x-text="selectedItem?.jumlah_rusak ?? 0"></span> unit</li>
+                            </ul>
+                        </div>
+                    </template>
+
+                    <template x-if="selectedItem?.barang?.tipe?.toLowerCase() !== 'habis pakai'">
+                        <div>
                             <div class="mb-4 p-3 bg-gray-50 rounded">
                                 <div class="grid grid-cols-3 gap-2 text-sm">
                                     <div>
@@ -277,49 +299,50 @@
                                 </div>
                             </div>
 
-                    <div class="border rounded-lg overflow-hidden">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-2 text-left font-semibold">No</th>
-                                    <th class="px-4 py-2 text-left font-semibold">Kode Unit</th>
-                                    <th class="px-4 py-2 text-left font-semibold">Status</th>
-                                    <th class="px-4 py-2 text-left font-semibold">Keterangan</th>
-                                    <th class="px-4 py-2 text-center font-semibold">Foto</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y">
-                                <template x-for="(unit, index) in selectedItem?.peminjaman_units" :key="unit.id">
-                                    <tr>
-                                        <td class="px-4 py-3" x-text="index + 1"></td>
-                                        <td class="px-4 py-3 font-mono text-xs" x-text="unit.barang_unit.unit_code"></td>
-                                        <td class="px-4 py-3">
-                                            <span class="px-2 py-1 text-xs rounded-full font-semibold"
-                                                  :class="{
-                                                      'bg-green-100 text-green-700': unit.status_pengembalian === 'dikembalikan',
-                                                      // both rusak_ringan and rusak_berat will match this
-                                                      'bg-yellow-100 text-yellow-700': unit.status_pengembalian?.toLowerCase().includes('rusak'),
-                                                      'bg-gray-100 text-gray-700': !unit.status_pengembalian
-                                                  }"
-                                                  x-text="unit.status_pengembalian.charAt(0).toUpperCase() + unit.status_pengembalian.slice(1)">
-                                            </span>
-                                        </td>
-                                        <td class="px-4 py-3 text-xs" x-text="unit.keterangan_kondisi || '-'"></td>
-                                        <td class="px-4 py-3 text-center">
-                                            <template x-if="unit.foto_kondisi">
-                                                <button @click="showPhotoModal(unit.foto_kondisi)" class="text-blue-600 hover:text-blue-800 text-xs underline">
-                                                    Lihat Foto
-                                                </button>
-                                            </template>
-                                            <template x-if="!unit.foto_kondisi">
-                                                <span class="text-gray-400 text-xs">-</span>
-                                            </template>
-                                        </td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
+                            <div class="border rounded-lg overflow-hidden">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left font-semibold">No</th>
+                                            <th class="px-4 py-2 text-left font-semibold">Kode Unit</th>
+                                            <th class="px-4 py-2 text-left font-semibold">Status</th>
+                                            <th class="px-4 py-2 text-left font-semibold">Keterangan</th>
+                                            <th class="px-4 py-2 text-center font-semibold">Foto</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y">
+                                        <template x-for="(unit, index) in selectedItem?.peminjaman_units" :key="unit.id">
+                                            <tr>
+                                                <td class="px-4 py-3" x-text="index + 1"></td>
+                                                <td class="px-4 py-3 font-mono text-xs" x-text="unit.barang_unit.unit_code"></td>
+                                                <td class="px-4 py-3">
+                                                    <span class="px-2 py-1 text-xs rounded-full font-semibold"
+                                                          :class="{
+                                                              'bg-green-100 text-green-700': unit.status_pengembalian === 'dikembalikan',
+                                                              'bg-yellow-100 text-yellow-700': unit.status_pengembalian?.toLowerCase().includes('rusak'),
+                                                              'bg-gray-100 text-gray-700': !unit.status_pengembalian
+                                                          }"
+                                                          x-text="unit.status_pengembalian.charAt(0).toUpperCase() + unit.status_pengembalian.slice(1)">
+                                                    </span>
+                                                </td>
+                                                <td class="px-4 py-3 text-xs" x-text="unit.keterangan_kondisi || '-'"></td>
+                                                <td class="px-4 py-3 text-center">
+                                                    <template x-if="unit.foto_kondisi">
+                                                        <button @click="showPhotoModal(unit.foto_kondisi)" class="text-blue-600 hover:text-blue-800 text-xs underline">
+                                                            Lihat Foto
+                                                        </button>
+                                                    </template>
+                                                    <template x-if="!unit.foto_kondisi">
+                                                        <span class="text-gray-400 text-xs">-</span>
+                                                    </template>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </template>
 
                     <div class="mt-6 flex justify-end">
                         <button @click="isUnitsModalOpen = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">

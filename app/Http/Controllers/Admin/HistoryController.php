@@ -29,7 +29,7 @@ class HistoryController extends Controller
 
         $query = Peminjaman::with([
             'user',
-            'dosenPengampu',
+            'dosen',
             'history',
             'detailPeminjaman.barang',
             'detailPeminjaman.peminjamanUnits.barangUnit'
@@ -63,7 +63,7 @@ class HistoryController extends Controller
     {
         $history = Peminjaman::with([
             'user',
-            'dosenPengampu',
+            'dosen',
             'detailPeminjaman.barang',
             'detailPeminjaman.peminjamanUnits.barangUnit',
             'history'

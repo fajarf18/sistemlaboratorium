@@ -29,9 +29,15 @@ public function store(LoginRequest $request): RedirectResponse
     $request->authenticate();
     $request->session()->regenerate();
 
-    // Ganti 'is_admin' menjadi 'role'
-    if (Auth::user()->role === 'admin') {
+    $user = Auth::user();
+    
+    // Redirect berdasarkan role
+    if ($user->role === 'admin') {
         return redirect()->intended(route('admin.dashboard'));
+    }
+    
+    if ($user->role === 'dosen') {
+        return redirect()->intended(route('dosen.dashboard'));
     }
 
     return redirect()->intended(route('user.dashboard'));

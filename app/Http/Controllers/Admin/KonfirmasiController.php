@@ -16,18 +16,21 @@ class KonfirmasiController extends Controller
      */
     public function index()
     {
-        $peminjamanMenunggu = Peminjaman::with('user', 'detailPeminjaman.barang', 'dosenPengampu')
+        $peminjamanMenunggu = Peminjaman::with('user', 'detailPeminjaman.barang', 'dosen', 'kelasPraktikum.modul')
             ->where('status', 'Menunggu Konfirmasi')
-            ->latest()->get();
+            ->latest()
+            ->get();
 
         $pengembalianMenunggu = Peminjaman::with([
             'user',
-            'dosenPengampu',
+            'dosen',
+            'kelasPraktikum.creator',
             'detailPeminjaman.barang',
             'detailPeminjaman.peminjamanUnits.barangUnit'
         ])
             ->where('status', 'Tunggu Konfirmasi Admin')
-            ->latest()->get();
+            ->latest()
+            ->get();
 
         return view('admin.konfirmasi.index', compact('peminjamanMenunggu', 'pengembalianMenunggu'));
     }
@@ -42,7 +45,8 @@ class KonfirmasiController extends Controller
     {
         $peminjaman = Peminjaman::with([
             'user',
-            'dosenPengampu',
+            'dosen',
+            'kelasPraktikum.modul',
             'detailPeminjaman.barang',
             'detailPeminjaman.peminjamanUnits.barangUnit',
             'history'
@@ -58,6 +62,12 @@ class KonfirmasiController extends Controller
 
             // Langkah 1: Iterasi semua detail dan unit untuk menghitung status aktual
             foreach ($peminjaman->detailPeminjaman as $detail) {
+                if (strtolower($detail->barang->tipe) === 'habis pakai') {
+                    // Detail habis pakai: gunakan jumlah_rusak sebagai jumlah yang sudah terpakai/habis
+                    $totalHabis += (int) $detail->jumlah_rusak;
+                    continue;
+                }
+
                 foreach ($detail->peminjamanUnits as $peminjamanUnit) {
                     // Cek status pengembalian dari setiap unit
                     $statusPengembalian = $this->normalizeDamageStatus($peminjamanUnit->status_pengembalian);
@@ -81,7 +91,10 @@ class KonfirmasiController extends Controller
             // Langkah 3: Evaluasi kondisi "Terlambat"
             if ($peminjaman->tanggal_kembali) {
                 $tanggalPinjam = Carbon::parse($peminjaman->tanggal_pinjam)->startOfDay();
-                $tanggalWajibKembali = $tanggalPinjam->copy()->addDays(3);
+                // Gunakan tanggal_wajib_kembali jika tersedia, fallback ke +3 hari dari pinjam
+                $tanggalWajibKembali = $peminjaman->tanggal_wajib_kembali
+                    ? Carbon::parse($peminjaman->tanggal_wajib_kembali)->startOfDay()
+                    : $tanggalPinjam->copy()->addDays(3);
                 $tanggalPengembalianUser = Carbon::parse($peminjaman->tanggal_kembali)->startOfDay();
 
                 if ($tanggalPengembalianUser->isAfter($tanggalWajibKembali)) {
@@ -105,7 +118,11 @@ class KonfirmasiController extends Controller
         if ($peminjaman->status === 'Menunggu Konfirmasi') {
             $peminjaman->total_unit_dipinjam = 0;
             foreach ($peminjaman->detailPeminjaman as $detail) {
-                $peminjaman->total_unit_dipinjam += $detail->peminjamanUnits->count();
+                if (strtolower($detail->barang->tipe) === 'habis pakai') {
+                    $peminjaman->total_unit_dipinjam += $detail->jumlah;
+                } else {
+                    $peminjaman->total_unit_dipinjam += $detail->peminjamanUnits->count();
+                }
             }
         }
 
@@ -152,11 +169,18 @@ class KonfirmasiController extends Controller
                 $detail->barang->increment('stok', $detail->jumlah);
 
                 // Reset status unit barang kembali ke 'baik'
-                foreach ($detail->peminjamanUnits as $peminjamanUnit) {
-                    $peminjamanUnit->barangUnit->update([
-                        'status' => 'baik',
-                        'keterangan' => null
-                    ]);
+                if (strtolower($detail->barang->tipe) === 'habis pakai') {
+                    $unitsDipinjam = $detail->barang->units()->where('status', 'dipinjam')->limit($detail->jumlah)->get();
+                    foreach ($unitsDipinjam as $unit) {
+                        $unit->update(['status' => 'baik', 'keterangan' => null]);
+                    }
+                } else {
+                    foreach ($detail->peminjamanUnits as $peminjamanUnit) {
+                        $peminjamanUnit->barangUnit->update([
+                            'status' => 'baik',
+                            'keterangan' => null
+                        ]);
+                    }
                 }
             }
 
@@ -173,13 +197,53 @@ class KonfirmasiController extends Controller
 
     public function terimaPengembalian($id)
     {
-        $peminjaman = Peminjaman::with('detailPeminjaman.peminjamanUnits.barangUnit')
+        $peminjaman = Peminjaman::with('detailPeminjaman.barang', 'detailPeminjaman.peminjamanUnits.barangUnit')
             ->where('id', $id)
             ->where('status', 'Tunggu Konfirmasi Admin')
             ->firstOrFail();
 
         DB::transaction(function () use ($peminjaman) {
             foreach ($peminjaman->detailPeminjaman as $detail) {
+                // Khusus barang habis pakai: gunakan jumlah_rusak sebagai jumlah yang terpakai, tambahkan sisa ke stok
+                if (strtolower($detail->barang->tipe) === 'habis pakai') {
+                    $jumlahDipinjam = (int) $detail->jumlah;
+                    $jumlahTerpakai = min($jumlahDipinjam, max(0, (int) $detail->jumlah_rusak));
+                    $jumlahSisa = $jumlahDipinjam - $jumlahTerpakai;
+
+                    // Unit yang sedang dipinjam (untuk habis pakai) diasumsikan bertatus 'dipinjam'
+                    $dipinjamUnits = $detail->barang->units()->where('status', 'dipinjam')->limit($jumlahDipinjam)->get();
+
+                    // Unit yang kembali (jumlah sisa) dikembalikan ke status baik
+                    if ($jumlahSisa > 0) {
+                        $unitsKembali = $dipinjamUnits->take($jumlahSisa);
+                        foreach ($unitsKembali as $unit) {
+                            $unit->update(['status' => 'baik']);
+                        }
+                        $detail->barang->increment('stok', $jumlahSisa);
+                    }
+
+                    // Unit yang terpakai dihapus dari master
+                    if ($jumlahTerpakai > 0) {
+                        $unitsHabis = $dipinjamUnits->slice($jumlahSisa, $jumlahTerpakai);
+                        foreach ($unitsHabis as $unit) {
+                            $unit->delete();
+                        }
+                    }
+
+                    // Simpan jumlah terpakai sebagai riwayat
+                    $detail->jumlah_rusak = $jumlahTerpakai;
+                    $detail->save();
+
+                    // Bersihkan peminjamanUnits/barangUnits jika pernah tercatat pada peminjaman ini (defensif)
+                    foreach ($detail->peminjamanUnits as $peminjamanUnit) {
+                        if ($peminjamanUnit->barangUnit) {
+                            $peminjamanUnit->barangUnit->delete();
+                        }
+                        $peminjamanUnit->delete();
+                    }
+                    continue;
+                }
+
                 // Hitung jumlah per status dari peminjaman units
                 $jumlahDikembalikan = 0;
                 $jumlahRusakHilang = 0;
@@ -229,12 +293,22 @@ class KonfirmasiController extends Controller
                 }
             }
 
+            // Jangan timpa tanggal_kembali dari user; gunakan jika sudah diisi, fallback ke sekarang
+            if (!$peminjaman->tanggal_kembali) {
+                $peminjaman->tanggal_kembali = now();
+            }
             $peminjaman->status = 'Dikembalikan';
-            $peminjaman->tanggal_kembali = now();
             $peminjaman->save();
+            // Reset kelas praktikum jika ada (supaya mahasiswa bisa join lagi)
+            if ($peminjaman->kelas_praktikum_id) {
+                $peminjaman->user->kelasPraktikumsJoined()->detach($peminjaman->kelas_praktikum_id);
+            }
+
+            return back()->with('success', 'Pengembalian berhasil dikonfirmasi, stok diperbarui, dan status kelas praktikum mahasiswa telah di-reset.');
         });
 
-        return back()->with('success', 'Pengembalian berhasil dikonfirmasi dan stok telah diperbarui.');
+        // return back()->with('success', 'Pengembalian berhasil dikonfirmasi dan stok telah diperbarui.'); // Moved inside transaction/success message updated
+        return back(); // The return is handled inside, or catch exception. Wait, DB::transaction returns result.
     }
 
     public function tolakPengembalian($id)
@@ -250,12 +324,9 @@ class KonfirmasiController extends Controller
         DB::transaction(function () use ($peminjaman) {
             // Reset status unit yang sudah diubah
             foreach ($peminjaman->detailPeminjaman as $detail) {
-                // Reset jumlah_rusak jika ada
-                if (isset($detail->jumlah_rusak) && $detail->jumlah_rusak > 0) {
-                    $detail->jumlah += $detail->jumlah_rusak;
-                    $detail->jumlah_rusak = 0;
-                    $detail->save();
-                }
+                // Reset data habis pakai yang disimpan sementara
+                $detail->jumlah_rusak = 0;
+                $detail->save();
 
                 // Reset status setiap unit peminjaman
                 foreach ($detail->peminjamanUnits as $peminjamanUnit) {

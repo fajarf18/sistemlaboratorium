@@ -42,9 +42,12 @@
                         </th>
                         <td class="px-6 py-4 align-middle">{{ $detail->jumlah }} pcs</td>
                         <td class="px-6 py-4 align-middle">
-                            @if($peminjaman->dosenPengampu)
-                                <div class="font-medium text-gray-900">{{ $peminjaman->dosenPengampu->nama }}</div>
-                                <div class="text-xs text-gray-500">{{ $peminjaman->dosenPengampu->mata_kuliah ?? '-' }}</div>
+                            @if($peminjaman->dosen)
+                                <div class="font-medium text-gray-900">{{ $peminjaman->dosen->nama }}</div>
+                                <div class="text-xs text-gray-500">{{ $peminjaman->dosen->prodi ?? '-' }}</div>
+                            @elseif($peminjaman->kelasPraktikum && $peminjaman->kelasPraktikum->modul)
+                                <div class="font-medium text-gray-900">{{ $peminjaman->kelasPraktikum->modul->user->nama ?? '-' }}</div>
+                                <div class="text-xs text-blue-500">Kelas: {{ $peminjaman->kelasPraktikum->nama_kelas }}</div>
                             @else
                                 <span class="text-gray-400 italic">-</span>
                             @endif
