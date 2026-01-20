@@ -37,7 +37,7 @@
                 
                 <div class="hidden text-left md:block">
                     <p class="font-semibold text-sm text-gray-800">{{ auth()->user()->nama }}</p>
-                    <p class="text-xs text-gray-500">Admin Lab</p>
+                    <p class="text-xs text-gray-500">Laboran</p>
                 </div>
             </button>
 

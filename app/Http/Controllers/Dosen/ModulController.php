@@ -30,8 +30,6 @@ class ModulController extends Controller
         $request->validate([
             'nama_modul' => 'required|string|max:255',
             'deskripsi' => 'nullable|string',
-            'jam_mulai' => 'nullable|date_format:H:i',
-            'jam_selesai' => 'nullable|date_format:H:i|after:jam_mulai',
             'items' => 'required|array|min:1',
             'items.*.barang_id' => 'required|exists:barangs,id',
             'items.*.jumlah' => 'required|integer|min:1',
@@ -40,19 +38,20 @@ class ModulController extends Controller
         $modul = Modul::create([
             'nama_modul' => $request->nama_modul,
             'deskripsi' => $request->deskripsi,
-            'jam_mulai' => $request->jam_mulai,
-            'jam_selesai' => $request->jam_selesai,
             'kode_modul' => Str::upper(Str::random(10)),
             'user_id' => Auth::id(),
             'is_active' => true,
         ]);
 
         foreach ($request->items as $item) {
-            ModulItem::create([
-                'modul_id' => $modul->id,
-                'barang_id' => $item['barang_id'],
-                'jumlah' => $item['jumlah'],
-            ]);
+            $barang = Barang::find($item['barang_id']);
+            if ($barang) {
+                ModulItem::create([
+                    'kode_modul' => $modul->kode_modul,
+                    'kode_barang' => $barang->kode_barang,
+                    'jumlah' => $item['jumlah'],
+                ]);
+            }
         }
 
         return redirect()->route('dosen.modul.index')->with('success', 'Modul berhasil dibuat.');
@@ -86,23 +85,24 @@ class ModulController extends Controller
         $request->validate([
             'nama_modul' => 'required|string|max:255',
             'deskripsi' => 'nullable|string',
-            'jam_mulai' => 'nullable|date_format:H:i',
-            'jam_selesai' => 'nullable|date_format:H:i|after:jam_mulai',
             'items' => 'required|array|min:1',
             'items.*.barang_id' => 'required|exists:barangs,id',
             'items.*.jumlah' => 'required|integer|min:1',
         ]);
 
-        $modul->update($request->only('nama_modul', 'deskripsi', 'jam_mulai', 'jam_selesai'));
+        $modul->update($request->only('nama_modul', 'deskripsi'));
 
         $modul->items()->delete();
 
         foreach ($request->items as $item) {
-            ModulItem::create([
-                'modul_id' => $modul->id,
-                'barang_id' => $item['barang_id'],
-                'jumlah' => $item['jumlah'],
-            ]);
+            $barang = Barang::find($item['barang_id']);
+            if ($barang) {
+                ModulItem::create([
+                    'kode_modul' => $modul->kode_modul,
+                    'kode_barang' => $barang->kode_barang,
+                    'jumlah' => $item['jumlah'],
+                ]);
+            }
         }
 
         return redirect()->route('dosen.modul.index')->with('success', 'Modul berhasil diperbarui.');

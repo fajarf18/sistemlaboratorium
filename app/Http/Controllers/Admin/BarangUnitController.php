@@ -113,9 +113,20 @@ class BarangUnitController extends Controller
             $newStatus = 'rusak_berat';
         }
 
+        // Tentukan nilai keterangan
+        $keterangan = $request->keterangan;
+        
+        // Jika rusak_berat, keterangan diambil dari action + lanjutan
+        if ($newStatus === 'rusak_berat' && $request->has('action_keterangan')) {
+            $keterangan = $request->action_keterangan;
+            if ($request->filled('keterangan_lanjutan')) {
+                $keterangan .= ' - ' . $request->keterangan_lanjutan;
+            }
+        }
+
         $unit->update([
             'status' => $newStatus,
-            'keterangan' => $request->keterangan,
+            'keterangan' => $keterangan,
         ]);
 
         return redirect()->back()->with('success', 'Status unit berhasil diperbarui.');

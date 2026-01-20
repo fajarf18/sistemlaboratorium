@@ -3,7 +3,7 @@
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
             <div x-data="{
                 items: {{ json_encode($modul->items->map(function($item) {
-                    return ['barang_id' => $item->barang_id, 'jumlah' => $item->jumlah];
+                    return ['barang_id' => $item->barang->id, 'jumlah' => $item->jumlah];
                 })) }},
                 addItem() {
                     this.items.push({ barang_id: '', jumlah: 1 });
@@ -38,23 +38,7 @@
                             @enderror
                         </div>
 
-                        {{-- Waktu Praktikum --}}
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label for="jam_mulai" class="block text-sm font-medium text-gray-700 mb-2">Jam Mulai</label>
-                                <input type="time" name="jam_mulai" id="jam_mulai" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" value="{{ old('jam_mulai', $modul->jam_mulai ? \Carbon\Carbon::parse($modul->jam_mulai)->format('H:i') : '') }}">
-                                @error('jam_mulai')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
-                            <div>
-                                <label for="jam_selesai" class="block text-sm font-medium text-gray-700 mb-2">Jam Selesai</label>
-                                <input type="time" name="jam_selesai" id="jam_selesai" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" value="{{ old('jam_selesai', $modul->jam_selesai ? \Carbon\Carbon::parse($modul->jam_selesai)->format('H:i') : '') }}">
-                                @error('jam_selesai')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
-                        </div>
+
 
                         {{-- Daftar Item --}}
                         <div>

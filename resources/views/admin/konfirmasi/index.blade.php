@@ -51,7 +51,7 @@
                                     <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Dosen Pengampu</div></th>
                                     <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Tanggal Pinjam</div></th>
                                     <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Tanggal Wajib Kembali</div></th>
-                                    <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Konfirmasi Dosen</div></th>
+                                    <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Konfirmasi Laboran</div></th>
                                     <th class="p-2 whitespace-nowrap"><div class="font-semibold text-center">Aksi</div></th>
                                 </tr>
                             </thead>
@@ -78,7 +78,7 @@
                                                 </span>
                                             @elseif($item->dosen && $item->dosen->id)
                                                 <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                                    Menunggu Konfirmasi Dosen
+                                                    Menunggu Konfirmasi Laboran
                                                 </span>
                                             @else
                                                 <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
@@ -100,6 +100,69 @@
                     </div>
                 </div>
             </div>
+
+            {{-- Status Pengguna (Peminjaman Aktif) --}}
+            <div class="bg-white shadow-lg rounded-sm border border-gray-200 mb-8" x-data="{ open: true }">
+                <header class="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
+                    <h2 class="font-semibold text-gray-800">Status Pengguna</h2>
+                    <button @click="open = !open">
+                        <svg class="w-6 h-6" :class="{ 'transform rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                </header>
+                <div class="p-3" x-show="open" x-transition>
+                    <div class="overflow-x-auto">
+                        <table class="table-auto w-full">
+                            <thead class="text-xs font-semibold uppercase text-gray-400 bg-gray-50">
+                                <tr>
+                                    <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Nama Peminjam</div></th>
+                                    <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Dosen Pengampu</div></th>
+                                    <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Tanggal Pinjam</div></th>
+                                    <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Tanggal Wajib Kembali</div></th>
+                                    <th class="p-2 whitespace-nowrap"><div class="font-semibold text-left">Status</div></th>
+                                    <th class="p-2 whitespace-nowrap"><div class="font-semibold text-center">Aksi</div></th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm divide-y divide-gray-100">
+                                @forelse ($statusPeminjam as $item)
+                                    <tr>
+                                        <td class="p-2 whitespace-nowrap">{{ $item->user->nama }}</td>
+                                        <td class="p-2 whitespace-nowrap">
+                                            @if($item->dosen)
+                                                <div class="font-medium text-gray-900">{{ $item->dosen->nama }}</div>
+                                            @elseif($item->kelasPraktikum && $item->kelasPraktikum->modul)
+                                                <div class="font-medium text-gray-900">{{ $item->kelasPraktikum->modul->user->nama ?? '-' }}</div>
+                                                <div class="text-xs text-blue-500">Kelas: {{ $item->kelasPraktikum->nama_kelas }}</div>
+                                            @else
+                                                <span class="text-gray-400 italic">-</span>
+                                            @endif
+                                        </td>
+                                        <td class="p-2 whitespace-nowrap">{{ \Carbon\Carbon::parse($item->tanggal_pinjam)->isoFormat('D MMMM YYYY') }}</td>
+                                        <td class="p-2 whitespace-nowrap">{{ \Carbon\Carbon::parse($item->tanggal_wajib_kembali)->isoFormat('D MMMM YYYY') }}</td>
+                                        <td class="p-2 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full
+                                                @if($item->status == 'Dipinjam') bg-green-100 text-green-800
+                                                @elseif($item->status == 'Menunggu Konfirmasi') bg-yellow-100 text-yellow-800
+                                                @elseif($item->status == 'Tunggu Konfirmasi Admin') bg-orange-100 text-orange-800
+                                                @else bg-gray-100 text-gray-800 @endif">
+                                                {{ $item->status }}
+                                            </span>
+                                        </td>
+                                        <td class="p-2 whitespace-nowrap text-center">
+                                            <button @click="openModal('status', {{ $item->id }})" class="px-3 py-1 text-sm font-medium text-white bg-blue-500 rounded-md hover:bg-blue-600">
+                                                Detail
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="6" class="p-4 text-center text-gray-500">Tidak ada status pengguna aktif.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-8 border-gray-300">
 
             {{-- Menunggu Konfirmasi Pengembalian --}}
             <div class="bg-white shadow-lg rounded-sm border border-gray-200" x-data="{ open: true }">
@@ -273,6 +336,21 @@
                                                 <td class="px-4 py-2">
                                                     <div class="font-semibold text-gray-800" x-text="item.barang.nama_barang"></div>
                                                     <div class="text-xs text-gray-500" x-text="item.barang.tipe"></div>
+                                                    
+                                                    {{-- Display Damaged Units directly here --}}
+                                                    <template x-if="item.peminjaman_units && item.peminjaman_units.some(u => (u.status_pengembalian && u.status_pengembalian.includes('rusak')))">
+                                                        <div class="mt-2 p-2 bg-red-50 rounded border border-red-100">
+                                                            <p class="text-xs font-bold text-red-600 mb-1">Unit Bermasalah:</p>
+                                                            <ul class="list-disc list-inside text-xs text-red-600 space-y-0.5">
+                                                                <template x-for="unit in item.peminjaman_units.filter(u => (u.status_pengembalian && u.status_pengembalian.includes('rusak')))">
+                                                                     <li>
+                                                                        <span x-text="unit.barang_unit.unit_code" class="font-mono font-semibold"></span>
+                                                                        <span x-text="` - ${unit.status_pengembalian.replace('_', ' ')}`" class="italic"></span>
+                                                                     </li>
+                                                                </template>
+                                                            </ul>
+                                                        </div>
+                                                    </template>
                                                 </td>
                                                 <td class="px-4 py-2 text-center">
                                                     <span x-text="item.barang.tipe.toLowerCase() === 'habis pakai' ? `${item.jumlah} unit` : `${item.peminjaman_units.length} unit`"></span>
@@ -299,14 +377,52 @@
 
                             <div class="flex justify-end mt-6 space-x-2">
                                 <button @click="isModalOpen = false" type="button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">Tutup</button>
-                                <form :action="modalType === 'peminjaman' ? `{{ url('admin/konfirmasi/tolak-peminjaman') }}/${detail.id}` : `{{ url('admin/konfirmasi/tolak-pengembalian') }}/${detail.id}`" method="POST">
-                                    @csrf
-                                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">Tolak</button>
-                                </form>
-                                <form :action="modalType === 'peminjaman' ? `{{ url('admin/konfirmasi/terima-peminjaman') }}/${detail.id}` : `{{ url('admin/konfirmasi/terima-pengembalian') }}/${detail.id}`" method="POST">
-                                    @csrf
-                                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">Terima</button>
-                                </form>
+                                
+                                {{-- Actions for Peminjaman --}}
+                                <template x-if="modalType === 'peminjaman'">
+                                    <div class="flex space-x-2">
+                                        <form :action="`{{ url('admin/konfirmasi/tolak-peminjaman') }}/${detail.id}`" method="POST">
+                                            @csrf
+                                            <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">Tolak</button>
+                                        </form>
+                                        <form :action="`{{ url('admin/konfirmasi/terima-peminjaman') }}/${detail.id}`" method="POST">
+                                            @csrf
+                                            <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">Terima</button>
+                                        </form>
+                                    </div>
+                                </template>
+
+                                {{-- Actions for Pengembalian --}}
+                                <template x-if="modalType === 'pengembalian'">
+                                    <div class="flex space-x-2">
+                                        <form :action="`{{ url('admin/konfirmasi/tolak-pengembalian') }}/${detail.id}`" method="POST">
+                                            @csrf
+                                            <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">Tolak</button>
+                                        </form>
+                                        <form :action="`{{ url('admin/konfirmasi/terima-pengembalian') }}/${detail.id}`" method="POST">
+                                            @csrf
+                                            <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">Terima</button>
+                                        </form>
+                                    </div>
+                                </template>
+
+                                {{-- Actions for Status --}}
+                                <template x-if="modalType === 'status'">
+                                    <div class="flex space-x-2">
+                                        <template x-if="detail.status === 'Dipinjam'">
+                                            <form :action="`{{ url('admin/status/selesaikan') }}/${detail.id}`" method="POST">
+                                                @csrf
+                                                <button type="submit" onclick="return confirm('Apakah Anda yakin ingin menyelesaikan peminjaman ini? Barang akan dikembalikan ke stok.')" class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700">Selesaikan (Kembali)</button>
+                                            </form>
+                                        </template>
+                                        <template x-if="detail.status === 'Menunggu Konfirmasi'">
+                                             <form :action="`{{ url('admin/status/batalkan') }}/${detail.id}`" method="POST">
+                                                @csrf
+                                                <button type="submit" onclick="return confirm('Apakah Anda yakin ingin membatalkan peminjaman ini?')" class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">Batalkan</button>
+                                            </form>
+                                        </template>
+                                    </div>
+                                </template>
                             </div>
                         </div>
                     </template>

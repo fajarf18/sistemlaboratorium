@@ -154,7 +154,24 @@
                             <tbody>
                                 <template x-for="item in detail.detail_peminjaman" :key="item.id">
                                     <tr class="border-t">
-                                        <td class="px-4 py-2" x-text="item.barang.nama_barang"></td>
+                                        <td class="px-4 py-2">
+                                            <div x-text="item.barang.nama_barang"></div>
+                                            
+                                            {{-- Display Damaged Units directly here --}}
+                                            <template x-if="item.peminjaman_units && item.peminjaman_units.some(u => (u.status_pengembalian && u.status_pengembalian.includes('rusak')))">
+                                                <div class="mt-2 p-2 bg-red-50 rounded border border-red-100">
+                                                    <p class="text-xs font-bold text-red-600 mb-1">Unit Bermasalah:</p>
+                                                    <ul class="list-disc list-inside text-xs text-red-600 space-y-0.5">
+                                                        <template x-for="unit in item.peminjaman_units.filter(u => (u.status_pengembalian && u.status_pengembalian.includes('rusak')))">
+                                                             <li>
+                                                                <span x-text="unit.barang_unit.unit_code" class="font-mono font-semibold"></span>
+                                                                <span x-text="` - ${unit.status_pengembalian.replace('_', ' ')}`" class="italic"></span>
+                                                             </li>
+                                                        </template>
+                                                    </ul>
+                                                </div>
+                                            </template>
+                                        </td>
                                         <td class="px-4 py-2 text-center" x-text="(item.peminjaman_units?.length ?? 0) + ' unit'"></td>
                                         <template x-if="detail.status === 'Dikembalikan'">
                                             <td class="px-4 py-2 text-center">

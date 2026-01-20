@@ -69,10 +69,10 @@
                                         {{ \Carbon\Carbon::parse($kelas->tanggal_praktikum)->format('d/m/Y') }}
                                     </span>
                                 @endif
-                                @if($kelas->modul->jam_mulai && $kelas->modul->jam_selesai)
+                                @if($kelas->jam_mulai && $kelas->jam_selesai)
                                     <span class="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800 flex items-center gap-1">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                        {{ \Carbon\Carbon::parse($kelas->modul->jam_mulai)->format('H:i') }} - {{ \Carbon\Carbon::parse($kelas->modul->jam_selesai)->format('H:i') }}
+                                        {{ \Carbon\Carbon::parse($kelas->jam_mulai)->format('H:i') }} - {{ \Carbon\Carbon::parse($kelas->jam_selesai)->format('H:i') }}
                                     </span>
                                 @endif
                             </div>

@@ -73,6 +73,24 @@
                             @enderror
                         </div>
 
+                        {{-- Waktu Praktikum --}}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="jam_mulai" class="block text-sm font-medium text-gray-700 mb-2">Jam Mulai</label>
+                                <input type="time" name="jam_mulai" id="jam_mulai" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500" value="{{ old('jam_mulai', $kelasPraktikum->jam_mulai ? \Carbon\Carbon::parse($kelasPraktikum->jam_mulai)->format('H:i') : '') }}">
+                                @error('jam_mulai')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div>
+                                <label for="jam_selesai" class="block text-sm font-medium text-gray-700 mb-2">Jam Selesai</label>
+                                <input type="time" name="jam_selesai" id="jam_selesai" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500" value="{{ old('jam_selesai', $kelasPraktikum->jam_selesai ? \Carbon\Carbon::parse($kelasPraktikum->jam_selesai)->format('H:i') : '') }}">
+                                @error('jam_selesai')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+
                         {{-- Status Aktif --}}
                         <div class="flex items-center">
                             <input type="checkbox" name="is_active" id="is_active" value="1" {{ old('is_active', $kelasPraktikum->is_active) ? 'checked' : '' }}

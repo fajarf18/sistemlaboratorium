@@ -11,9 +11,7 @@ class Modul extends Model
         'deskripsi',
         'kode_modul',
         'is_active',
-        'user_id',
-        'jam_mulai',
-        'jam_selesai'
+        'user_id'
     ];
 
     public function user()
@@ -27,6 +25,6 @@ class Modul extends Model
 
     public function items()
     {
-        return $this->hasMany(ModulItem::class);
+        return $this->hasMany(ModulItem::class, 'kode_modul', 'kode_modul');
     }
 }

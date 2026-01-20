@@ -47,24 +47,8 @@ class KelasPraktikumController extends Controller
             'deskripsi' => 'nullable|string',
             'modul_id' => 'required|exists:moduls,id',
             'tanggal_praktikum' => 'nullable|date',
-            // Waktu diambil dari modul atau bisa di-override? User said "di modul praktikum sendiri tambahkan jamnya", but also "kelas praktikum ... tanggal dan modul".
-            // "untuk di modul praktikum sendiri tambahkan jamnya." -> Modul has default time?
-            // "jadi nanti di tampilan user kelas praktikum akan ikut berubah terkait kelas praktikum dan modul apa didalanya"
-            // If Class links to Modul, Class might use Modul's time or Class's specific time.
-            // Let's keep Class time as specific instance time (Date), Modul has default time (Time range).
-            // But User said "hanya memasukkan nama praktikum dan kelas serta tanggal dan modul".
-            // So Class has Date. Modul has Time.
-            // I will keep Class Date. Time might come from Modul?
-            // Controller currently validates `jam_mulai`.
-            // Let's make `jam_mulai` optional or remove if implied from Modul?
-            // "untuk di modul praktikum sendiri tambahkan jamnya" -> Modul has time.
-            // So Class might not need time if it follows Modul?
-            // Let's assume Class still needs Date. Time is in Modul.
-            // But if a Class happens on distinct Date, does it happen at Modul's default time?
-            // Let's allow Class to *not* specify time if it uses Modul's time, or maybe standard is Modul time.
-            // I will remove Time from Class Create Input if User implies it's in Modul. 
-            // "hanya memasukkan nama praktikum dan kelas serta tanggal dan modul" -> NO TIME in Class Input mentioned here.
-            
+            'jam_mulai' => 'required|date_format:H:i',
+            'jam_selesai' => 'required|date_format:H:i|after:jam_mulai',
             'is_active' => 'nullable|boolean',
         ]);
 
@@ -76,6 +60,8 @@ class KelasPraktikumController extends Controller
                 'deskripsi' => $validated['deskripsi'] ?? null,
                 'modul_id' => $validated['modul_id'],
                 'tanggal_praktikum' => $validated['tanggal_praktikum'] ?? null,
+                'jam_mulai' => $validated['jam_mulai'],
+                'jam_selesai' => $validated['jam_selesai'],
                 'is_active' => $request->has('is_active') ? true : false,
                 'created_by' => Auth::id(),
             ]);
@@ -126,6 +112,8 @@ class KelasPraktikumController extends Controller
             'deskripsi' => 'nullable|string',
             'modul_id' => 'required|exists:moduls,id',
             'tanggal_praktikum' => 'nullable|date',
+            'jam_mulai' => 'required|date_format:H:i',
+            'jam_selesai' => 'required|date_format:H:i|after:jam_mulai',
             'is_active' => 'nullable|boolean',
         ]);
 
@@ -137,6 +125,8 @@ class KelasPraktikumController extends Controller
                 'deskripsi' => $validated['deskripsi'] ?? null,
                 'modul_id' => $validated['modul_id'],
                 'tanggal_praktikum' => $validated['tanggal_praktikum'] ?? null,
+                'jam_mulai' => $validated['jam_mulai'],
+                'jam_selesai' => $validated['jam_selesai'],
                 'is_active' => $request->has('is_active') ? true : false,
             ]);
 

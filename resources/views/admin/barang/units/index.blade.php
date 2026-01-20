@@ -223,9 +223,34 @@
                             <option value="dipinjam">Dipinjam</option>
                         </select>
                     </div>
-                    <div>
+                    
+                    {{-- Kondisi jika Rusak Berat: Keterangan (Pilihan) --}}
+                    <div x-show="editItem.status == 'rusak_berat'" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Tindakan / Keterangan <span class="text-red-500">*</span></label>
+                            <select name="action_keterangan" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" 
+                                :disabled="editItem.status != 'rusak_berat'" 
+                                x-bind:value="['Diganti', 'Dibuang'].includes(editItem.keterangan && editItem.keterangan.split(' - ')[0]) ? editItem.keterangan.split(' - ')[0] : 'Dibuang'">
+                                <option value="Dibuang">Dibuang</option>
+                                <option value="Diganti">Diganti</option>
+                            </select>
+                        </div>
+                        <div>
+                             <label class="block text-sm font-medium text-gray-700">Keterangan Lanjutan</label>
+                             <textarea name="keterangan_lanjutan" rows="2" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" 
+                                placeholder="Detail tambahan (opsional)..."
+                                :disabled="editItem.status != 'rusak_berat'"
+                                x-bind:value="editItem.keterangan && editItem.keterangan.includes(' - ') ? editItem.keterangan.split(' - ')[1] : ''"></textarea>
+                        </div>
+                    </div>
+
+                    {{-- Kondisi jika BUKAN Rusak Berat: Keterangan (Textarea) --}}
+                    <div x-show="editItem.status != 'rusak_berat'">
                         <label for="edit_keterangan" class="block text-sm font-medium text-gray-700">Keterangan</label>
-                        <textarea name="keterangan" id="edit_keterangan" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" x-model="editItem.keterangan" placeholder="Keterangan jika rusak..."></textarea>
+                        <textarea name="keterangan" id="edit_keterangan" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" 
+                        x-model="editItem.keterangan" 
+                        placeholder="Keterangan kondisi..."
+                        :disabled="editItem.status == 'rusak_berat'"></textarea>
                     </div>
                     <div class="flex justify-end gap-4 pt-4">
                         <button type="button" @click="showEditModal = false" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Batal</button>

@@ -7,18 +7,18 @@ use Illuminate\Database\Eloquent\Model;
 class ModulItem extends Model
 {
     protected $fillable = [
-        'modul_id',
-        'barang_id',
+        'kode_modul',
+        'kode_barang',
         'jumlah'
     ];
 
     public function modul()
     {
-        return $this->belongsTo(Modul::class);
+        return $this->belongsTo(Modul::class, 'kode_modul', 'kode_modul');
     }
 
     public function barang()
     {
-        return $this->belongsTo(Barang::class);
+        return $this->belongsTo(Barang::class, 'kode_barang', 'kode_barang');
     }
 }

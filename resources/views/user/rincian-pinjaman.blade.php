@@ -39,6 +39,24 @@
                     <tr class="bg-white border-b hover:bg-gray-50">
                         <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap align-middle">
                             {{ $detail->barang->nama_barang }}
+                             @if($detail->peminjamanUnits->isNotEmpty())
+                                @php
+                                    $damagedUnits = $detail->peminjamanUnits->filter(function($u) {
+                                        return ($u->status_pengembalian && str_contains($u->status_pengembalian, 'rusak')) || 
+                                               ($u->barangUnit && str_contains($u->barangUnit->status, 'rusak'));
+                                    });
+                                @endphp
+                                @if($damagedUnits->isNotEmpty())
+                                    <div class="mt-2 text-xs text-red-600 font-normal whitespace-normal">
+                                        <strong>Unit Bermasalah:</strong>
+                                        <ul class="list-disc list-inside">
+                                            @foreach($damagedUnits as $unit)
+                                                <li>{{ $unit->barangUnit->unit_code }} ({{ $unit->status_pengembalian ? ucwords(str_replace('_', ' ', $unit->status_pengembalian)) : ucwords(str_replace('_', ' ', $unit->barangUnit->status)) }})</li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                @endif
+                            @endif
                         </th>
                         <td class="px-6 py-4 align-middle">{{ $detail->jumlah }} pcs</td>
                         <td class="px-6 py-4 align-middle">

@@ -32,7 +32,19 @@ class KonfirmasiController extends Controller
             ->latest()
             ->get();
 
-        return view('admin.konfirmasi.index', compact('peminjamanMenunggu', 'pengembalianMenunggu'));
+        // Mengambil peminjaman yang statusnya BUKAN 'Dikembalikan'
+        $statusPeminjam = Peminjaman::with([
+            'user',
+            'dosen',
+            'kelasPraktikum.modul',
+            'detailPeminjaman.barang',
+            'detailPeminjaman.peminjamanUnits.barangUnit'
+        ])
+        ->where('status', '!=', 'Dikembalikan') 
+        ->latest('tanggal_pinjam')
+        ->get();
+
+        return view('admin.konfirmasi.index', compact('peminjamanMenunggu', 'pengembalianMenunggu', 'statusPeminjam'));
     }
 
   /**
@@ -384,5 +396,129 @@ class KonfirmasiController extends Controller
     private function isDamageStatus(?string $status): bool
     {
         return in_array($status, ['rusak_ringan', 'rusak_berat'], true);
+    }
+
+    /**
+     * Menyelesaikan peminjaman (status Dipinjam -> Dikembalikan)
+     * Mengembalikan semua barang ke stok dengan status baik
+     */
+    public function selesaikan($id)
+    {
+        try {
+            $peminjaman = Peminjaman::findOrFail($id);
+
+            // Validasi status harus Dipinjam
+            if ($peminjaman->status !== 'Dipinjam') {
+                return redirect()->back()->with('error', 'Peminjaman hanya bisa diselesaikan jika statusnya Dipinjam.');
+            }
+
+            DB::beginTransaction();
+
+            // Update status peminjaman
+            $peminjaman->tanggal_kembali = now();
+            $peminjaman->status = 'Dikembalikan';
+            $peminjaman->save();
+
+            // Ambil semua detail peminjaman
+            $detailPeminjamans = \App\Models\DetailPeminjaman::where('peminjaman_id', $peminjaman->id)->get();
+
+            foreach ($detailPeminjamans as $detail) {
+                // Ambil semua unit yang dipinjam
+                $peminjamanUnits = PeminjamanUnit::where('detail_peminjaman_id', $detail->id)->get();
+
+                $jumlahDikembalikan = 0;
+
+                foreach ($peminjamanUnits as $peminjamanUnit) {
+                    // Update status unit barang menjadi 'baik'
+                    $barangUnit = \App\Models\BarangUnit::find($peminjamanUnit->barang_unit_id);
+                    if ($barangUnit) {
+                        $barangUnit->status = 'baik';
+                        $barangUnit->save();
+                    }
+
+                    // Update status pengembalian
+                    $peminjamanUnit->status_pengembalian = 'dikembalikan';
+                    $peminjamanUnit->save();
+
+                    $jumlahDikembalikan++;
+                }
+
+                // Kembalikan stok barang
+                if ($jumlahDikembalikan > 0) {
+                    $detail->barang->increment('stok', $jumlahDikembalikan);
+                }
+            }
+
+            // Buat history pengembalian
+            \App\Models\HistoryPeminjaman::create([
+                'peminjaman_id' => $peminjaman->id,
+                'user_id' => $peminjaman->user_id,
+                'tanggal_kembali' => now(),
+                'status_pengembalian' => 'Aman',
+                'deskripsi_kerusakan' => 'Diselesaikan oleh admin',
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('admin.konfirmasi.index')->with('success', 'Peminjaman berhasil diselesaikan dan barang dikembalikan ke stok.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Illuminate\Support\Facades\Log::error('Error selesaikan peminjaman: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal menyelesaikan peminjaman: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Membatalkan peminjaman (status Menunggu Konfirmasi)
+     * Mengembalikan unit ke status baik dan menghapus data peminjaman
+     */
+    public function batalkan($id)
+    {
+        try {
+            $peminjaman = Peminjaman::findOrFail($id);
+
+            // Validasi status harus Menunggu Konfirmasi
+            if ($peminjaman->status !== 'Menunggu Konfirmasi') {
+                return redirect()->back()->with('error', 'Peminjaman hanya bisa dibatalkan jika statusnya Menunggu Konfirmasi.');
+            }
+
+            DB::beginTransaction();
+
+            // Ambil semua detail peminjaman
+            $detailPeminjamans = \App\Models\DetailPeminjaman::where('peminjaman_id', $peminjaman->id)->get();
+
+            foreach ($detailPeminjamans as $detail) {
+                // Ambil semua unit yang dipinjam
+                $peminjamanUnits = PeminjamanUnit::where('detail_peminjaman_id', $detail->id)->get();
+
+                foreach ($peminjamanUnits as $peminjamanUnit) {
+                    // Kembalikan status unit barang menjadi 'baik'
+                    $barangUnit = \App\Models\BarangUnit::find($peminjamanUnit->barang_unit_id);
+                    if ($barangUnit) {
+                        $barangUnit->status = 'baik';
+                        $barangUnit->save();
+                    }
+
+                    // Hapus peminjaman unit
+                    $peminjamanUnit->delete();
+                }
+
+                // Hapus detail peminjaman
+                $detail->delete();
+            }
+
+            // Hapus peminjaman
+            $peminjaman->delete();
+
+            DB::commit();
+
+            return redirect()->route('admin.konfirmasi.index')->with('success', 'Peminjaman berhasil dibatalkan dan barang dikembalikan ke stok.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Illuminate\Support\Facades\Log::error('Error batalkan peminjaman: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal membatalkan peminjaman: ' . $e->getMessage());
+        }
     }
 }

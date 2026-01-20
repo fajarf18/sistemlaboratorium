@@ -88,9 +88,8 @@ Route::get('/konfirmasi', [KonfirmasiController::class, 'index'])->name('konfirm
     Route::post('/konfirmasi/tolak-pengembalian/{id}', [KonfirmasiController::class, 'tolakPengembalian'])->name('konfirmasi.tolakPengembalian');
     Route::get('history/download', [HistoryController::class, 'download'])->name('history.download');
     Route::resource('history', HistoryController::class)->only(['index', 'show', 'destroy']);
-    Route::get('/status-peminjam', [App\Http\Controllers\Admin\StatusPeminjamController::class, 'index'])->name('status.index');
-    Route::post('/status-peminjam/{id}/selesaikan', [App\Http\Controllers\Admin\StatusPeminjamController::class, 'selesaikan'])->name('status.selesaikan');
-    Route::post('/status-peminjam/{id}/batalkan', [App\Http\Controllers\Admin\StatusPeminjamController::class, 'batalkan'])->name('status.batalkan');
+    Route::post('/status/selesaikan/{id}', [KonfirmasiController::class, 'selesaikan'])->name('status.selesaikan');
+    Route::post('/status/batalkan/{id}', [KonfirmasiController::class, 'batalkan'])->name('status.batalkan');
 });
 
 

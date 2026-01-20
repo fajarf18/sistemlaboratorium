@@ -21,14 +21,7 @@
                     <h3 class="text-lg font-semibold mb-2">Deskripsi</h3>
                     <p class="mb-4">{{ $modul->deskripsi ?: 'Tidak ada deskripsi.' }}</p>
                     
-                    @if($modul->jam_mulai && $modul->jam_selesai)
-                    <div class="flex items-center gap-2 text-sm text-gray-600">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>Waktu Praktikum: {{ \Carbon\Carbon::parse($modul->jam_mulai)->format('H:i') }} - {{ \Carbon\Carbon::parse($modul->jam_selesai)->format('H:i') }}</span>
-                    </div>
-                    @endif
+
                 </div>
             </div>
 
